@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>詐欺小工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/libarchive.js/dist/libarchive.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/unrar-js@0.2.3/dist/unrar.min.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-900 h-screen flex">
+
+    <div class="w-72 bg-slate-900 flex flex-col shadow-2xl shrink-0">
+        <div class="p-8 text-center border-b border-slate-800">
+            <div class="w-16 h-16 bg-sky-500 rounded-2xl flex items-center justify-center text-white text-3xl mx-auto shadow-lg mb-4">⚖️</div>
+            <h1 class="text-white font-black text-xl">詐欺小工具</h1>
+            <p class="text-slate-500 text-xs mt-1 uppercase tracking-widest">Version 6.0 </p>
+        </div>
+        <nav class="flex-1 px-4 mt-6">
+            <button onclick="switchTab('withdraw')" id="tabBtn-withdraw" class="w-full flex items-center px-5 py-4 rounded-2xl bg-sky-600 text-white shadow-xl font-bold transition-all">
+                <span class="mr-3">📋</span> 提領一覽表製作
+            </button>
+            <button onclick="switchTab('csv')" id="tabBtn-csv" class="w-full flex items-center px-5 py-4 rounded-2xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all font-bold">
+                <span class="mr-3">📂</span> CSV 轉 XLSX
+            </button>
+            <button onclick="switchTab('tools')" id="nav-tools" class="w-full flex items-center px-5 py-4 rounded-2xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all font-bold">
+                <span class="mr-3">🛠️</span> 其他小工具
+            </button>
+        </nav>
+        <div id="libStatus" class="p-4 text-[15px] text-center text-emerald-400 font-bold bg-black/20">✅ 該系統無連線功能</div>
+    </div>
+
+<main class="flex-1 overflow-y-auto p-12">
+        <div class="max-w-5xl mx-auto">
+            
+            <div id="tab-withdraw">
+                <div class="mb-10">
+                    <h2 class="text-4xl font-black text-slate-800">提領一覽表製作</h2>
+                    <p class="text-slate-500 mt-3">自動比對並整理提領一覽表</p>
+                </div>
+
+                <div class="bg-white rounded-[2.5rem] shadow-2xl p-10 border border-slate-100">
+                    <div class="grid grid-cols-2 gap-12">
+                        <div class="space-y-8">
+                            <div>
+                                <label class="text-sm font-black text-slate-700 mb-3 block">1. 載入銀行明細 (單選Excel)</label>
+                                <input type="file" id="mainFile" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100 cursor-pointer">
+                            </div>
+                            <div>
+                                <label class="text-sm font-black text-slate-700 mb-3 block">2. 載入熱點資料 (可多選 PDF/Excel)</label>
+                                <input type="file" id="pdfFiles" multiple onchange="updateFileList()" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+                                
+                                <div id="fileListContainer" class="mt-4 p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200 hidden">
+                                    <p class="text-[11px] font-bold text-slate-400 uppercase mb-2">已選取檔案：</p>
+                                    <ul id="fileNamesDisplay" class="text-xs text-slate-600 space-y-1 list-disc pl-4"></ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-5">
+                            <div class="flex flex-col"><span class="text-[11px] font-bold text-slate-500 mb-1">日期範圍 (YYYMMDD-YYYMMDD)</span><input type="text" id="dateRange" placeholder="1140815-1140817" class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-sky-500 outline-none"></div>
+                            <div class="flex flex-col"><span class="text-[11px] font-bold text-slate-500 mb-1">人頭帳戶姓名 (可不填)</span><input type="text" id="personName" placeholder="選填" class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none"></div>
+                            <div class="flex flex-col"><span class="text-[11px] font-bold text-slate-500 mb-1">車手姓名</span><input type="text" id="muleName" class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none"></div>
+                            <div class="flex flex-col"><span class="text-[11px] font-bold text-slate-500 mb-1">車手身分證</span><input type="text" id="muleId" class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none"></div>
+                            <div class="flex flex-col"><span class="text-[11px] font-bold text-slate-500 mb-1">車手生日 (YYYMMDD)</span><input type="text" id="muleBirthday" placeholder="0851108" class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none"></div>
+                        </div>
+                    </div>
+
+                    <div class="mt-12">
+                        <button onclick="handleProcess()" id="btnStart" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-black py-5 rounded-[1.5rem] shadow-xl transition-all text-lg">開始比對製作</button>
+                        <p id="loadingMsg" class="mt-6 text-center text-sky-600 font-black hidden animate-pulse">正在處理數據並生成提領一覽表...</p>
+                    </div>
+                </div>
+            </div>
+            <div id="tab-csv" class="hidden">
+                <div class="mb-10">
+                    <h2 class="text-4xl font-black text-slate-800">CSV 批次轉檔工具</h2>
+                    <p class="text-slate-500 mt-3">直接上傳資料夾 (裡面需要包含轉檔的檔案，可以是壓縮檔、csv或txt)</p>
+                </div>
+                <div class="bg-white rounded-[2.5rem] shadow-2xl p-10 border border-slate-100">
+                    <div class="flex flex-col items-center justify-center border-4 border-dashed border-slate-100 rounded-[2rem] py-16 hover:bg-slate-50 transition-colors cursor-pointer" onclick="document.getElementById('csvFolderInput').click()">
+                        <input type="file" id="csvFolderInput" webkitdirectory directory multiple class="hidden" onchange="handleFolderSelect(event)">
+                        <div class="text-6xl mb-6">📂</div>
+                        <h3 class="text-2xl font-black text-slate-700" id="csvStatusText">點擊選取來源資料夾</h3>
+                        <p class="text-slate-400 text-sm mt-3">上傳後，點擊下方按鈕選取儲存位置</p>
+                    </div>
+                    <button id="btnRunCsv" onclick="startModernConversion()" class="w-full mt-10 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-5 rounded-[1.5rem] shadow-xl text-lg hidden transition-all">
+                        選取儲存位置並開始轉檔
+                    </button>
+                </div>
+            </div>
+            <div id="tab-tools" class="hidden">
+                <div class="mb-10">
+                    <h2 class="text-4xl font-black text-slate-800">其他小工具下載</h2>
+                    <p class="text-slate-500 mt-3">常用輔助軟體快速下載通道</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="bg-white rounded-[2rem] shadow-xl p-8 border border-slate-100 flex flex-col justify-between hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+                        <div>
+                            <div class="w-14 h-14 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center text-3xl mb-6 font-semibold">🌐</div>
+                            <h3 class="text-xl font-black text-slate-800">鴿手</h3>
+                            <p class="text-slate-400 text-sm mt-2 leading-relaxed">查看警政、交通等法規 (含有附屬工具)</p>
+                        </div>
+                        <a href="https://pigeonhand.tw/" target="_blank" class="w-full text-center mt-8 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 rounded-[1.25rem] shadow-lg shadow-emerald-100 transition-colors block">
+                            🌐 前往
+                        </a>
+                    </div>
+                    <div class="bg-white rounded-[2rem] shadow-xl p-8 border border-slate-100 flex flex-col justify-between hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+                        <div>
+                            <div class="w-14 h-14 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center text-3xl mb-6 font-semibold">📦</div>
+                            <h3 class="text-xl font-black text-slate-800">貼圖小鴿手</h3>
+                            <p class="text-slate-400 text-sm mt-2 leading-relaxed">製作照片黏貼表的小程式。 作者 蔡智楷</p>
+                        </div>
+                        <a href="https://drive.google.com/file/d/1wHYpgNCXBnpxU0HoLsm5KkLJygh_mJtp/view" target="_blank" class="w-full text-center mt-8 bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 rounded-[1.25rem] shadow-lg shadow-blue-100 transition-colors block">
+                            📥 下載最新版本
+                        </a>
+                    </div>
+                    <div class="bg-white rounded-[2rem] shadow-xl p-8 border border-slate-100 flex flex-col justify-between hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+                        <div>
+                            <div class="w-14 h-14 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center text-3xl mb-6 font-semibold">📦</div>
+                            <h3 class="text-xl font-black text-slate-800">金融調閱平台快速轉換Excel小工具</h3>
+                            <p class="text-slate-400 text-sm mt-2 leading-relaxed">csv轉換excel程式。 作者 廖瑞瑜</p>
+                        </div>
+                        <a href="https://drive.google.com/drive/folders/1xdD_0JtqpRFn9WJYXb5CzzjrEo99obAQ" target="_blank" class="w-full text-center mt-8 bg-purple-500 hover:bg-purple-600 text-white font-bold py-4 rounded-[1.25rem] shadow-lg shadow-purple-100 transition-colors block">
+                            📥 下載最新版本
+                        </a>
+                    </div>
+                    </div>
+            </div>
+        </div>
+</main>
+    <script>
+//------------介面切換邏輯（三頁版）------------
+        function switchTab(tab) {
+            const withdrawTab = document.getElementById('tab-withdraw');
+            const csvTab = document.getElementById('tab-csv');
+            const toolsTab = document.getElementById('tab-tools'); // 新增的小工具頁面
+
+            const btnWithdraw = document.getElementById('tabBtn-withdraw');
+            const btnCsv = document.getElementById('tabBtn-csv');
+            const btnTools = document.getElementById('tabBtn-tools'); // 新增的小工具按鈕
+
+            // --- 1. 預設將所有頁面隱藏 ---
+            if (withdrawTab) withdrawTab.classList.add('hidden');
+            if (csvTab) csvTab.classList.add('hidden');
+            if (toolsTab) toolsTab.classList.add('hidden');
+
+            // --- 2. 預設將所有按鈕恢復成「未選取」的灰色暗色樣式 ---
+            const defaultBtnClass = "w-full flex items-center px-5 py-4 rounded-2xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all font-bold";
+            if (btnWithdraw) btnWithdraw.className = defaultBtnClass;
+            if (btnCsv) btnCsv.className = defaultBtnClass;
+            if (btnTools) btnTools.className = defaultBtnClass;
+
+            // --- 3. 根據點擊的頁面，單獨打開並套用選取樣式 ---
+            if (tab === 'withdraw') {
+                if (withdrawTab) withdrawTab.classList.remove('hidden');
+                if (btnWithdraw) btnWithdraw.className = "w-full flex items-center px-5 py-4 rounded-2xl bg-sky-600 text-white shadow-xl font-bold transition-all";
+            } 
+            else if (tab === 'csv') {
+                if (csvTab) csvTab.classList.remove('hidden');
+                if (btnCsv) btnCsv.className = "w-full flex items-center px-5 py-4 rounded-2xl bg-emerald-600 text-white shadow-xl font-bold transition-all";
+            } 
+            else if (tab === 'tools') {
+                if (toolsTab) toolsTab.classList.remove('hidden');
+                // 小工具點下去變成質感的深紫色背景
+                if (btnTools) btnTools.className = "w-full flex items-center px-5 py-4 rounded-2xl bg-purple-600 text-white shadow-xl font-bold transition-all";
+            }
+        }
+//------------提領一覽表------------
+        const BANK_DICT = {"004": "臺灣銀行","005": "臺灣土地銀行","006": "合作金庫商業銀行","007": "第一商業銀行","008": "華南商業銀行",
+        "009": "彰化商業銀行","011": "上海商業儲蓄銀行","012": "台北富邦商業銀行","013": "國泰世華商業銀行",
+        "016": "高雄銀行","017": "兆豐國際商業銀行","018": "全國農業金庫","020": "日商瑞穗銀行臺北分行",
+        "021": "花旗(臺灣)商業銀行","022": "美國銀行臺北分行","023": "泰國盤谷行銀行臺北分行","025": "菲律賓首都銀行北臺北分行",
+        "029": "新加坡商大華銀行台北分行","030": "美商道富銀行台北分行","037": "法商法國興業銀行台北分行","039": "澳商澳盛銀行臺北分行",
+        "048": "王道商業銀行","050": "臺灣中小企業銀行","052": "渣打國際商業銀行","053": "台中商業銀行","054": "京城商業銀行",
+        "072": "德商德意志銀行臺北分行","075": "香港商東亞商行臺北分行","076": "美商摩根大通銀行臺北分行","081": "滙豐(臺灣)商業銀行",
+        "082": "法國巴黎銀行臺北分行","085": "新加坡商新加坡華僑銀行臺北分行","086": "法商東方匯理銀行臺北分行",
+        "092": "瑞士商瑞士銀行臺北分行","093": "荷商安智銀行臺北分行","098": "日商三菱日聯銀行臺北分行","101": "瑞興商業銀行",
+        "102": "華泰商業銀行","103": "臺灣新光商業銀行","104": "臺北市第五信用合作社","108": "陽信商業銀行",
+        "114": "基隆第一信用合作社","115": "基隆市第二信用合作社","118": "板信商業銀行","119": "淡水第一信用合作社",
+        "120": "淡水信用合作社","124": "宜蘭信用合作社","127": "桃園信用合作社","130": "新竹第一信用合作社",
+        "132": "新竹第三信用合作社","146": "臺中市第二信用合作社","147": "三信商業銀行","158": "彰化第一信用合作社",
+        "161": "彰化第五信用合作社","162": "彰化第六信用合作社","163": "彰化第十信用合作社","165": "鹿港信用合作社",
+        "178": "嘉義市第三信用合作社","188": "臺南第三信用合作社","204": "高雄市第三信用合作社","215": "花蓮第一信用合作社",
+        "216": "花蓮第二信用合作社","222": "澎湖縣第一信用合作社","223": "澎湖第二信用合作社","224": "金門縣信用合作社",
+        "321": "日商三井住友銀行","388": "全盈支付","389": "全支付","390": "悠遊卡公司","391": "一卡通","392": "愛金卡",
+        "393": "遠鑫電子票證","394": "國際連","395": "橘子支","396": "街口支付","397": "歐付寶","398": "簡單支付",
+        "600": "農金資訊","700": "中華郵政公司","803": "聯邦商業銀行","805": "遠東國際商業銀行","806": "元大商業銀行",
+        "807": "永豐商業銀行","808": "玉山商業銀行","809": "凱基商業銀行","810": "星展(臺灣)商業銀行",
+        "812": "台新國際商業銀行","815": "日盛國際商業銀行","816": "安泰商業銀行","822": "中國信託商業銀行",
+        "823": "將來商業銀行","824": "連線商業銀行","826": "樂天國際商業銀行","910": "農會相關單位","951": "北區農會",
+        "952": "大埔鄉農會","954": "中區農會","961": "同袍儲蓄會","997": "南資中心"};
+        const pdfjsLib = window['pdfjs-dist/build/pdf'];
+        if (pdfjsLib) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        }
+        function updateFileList() {
+            const input = document.getElementById('pdfFiles');
+            const display = document.getElementById('fileNamesDisplay');
+            const container = document.getElementById('fileListContainer');
+            display.innerHTML = "";
+            if (input.files.length > 0) {
+                container.classList.remove('hidden');
+                Array.from(input.files).forEach(f => {
+                    const li = document.createElement('li');
+                    li.textContent = f.name;
+                    display.appendChild(li);
+                });
+            } else { container.classList.add('hidden'); }
+        }
+        // 生日格式化邏輯 (0851108 -> 085/11/08)
+        function formatBirthday(val) {
+            let s = String(val).replace(/\D/g, "");
+            if (s.length === 7) {
+                return `${s.substring(0,3)}/${s.substring(3,5)}/${s.substring(5,7)}`;
+            } else if (s.length === 6) {
+                return `${s.substring(0,2)}/${s.substring(2,4)}/${s.substring(4,6)}`;
+            }
+            return val;
+        }
+        async function handleProcess() {
+            const mainFile = document.getElementById('mainFile').files[0];
+            const extraFiles = document.getElementById('pdfFiles').files;
+            const btn = document.getElementById('btnStart');
+            const loader = document.getElementById('loadingMsg');
+            if (!mainFile) return alert("請載入金流主檔案！");
+            btn.disabled = true; loader.classList.remove('hidden');
+            try {
+                const rangeInput = document.getElementById('dateRange').value.trim();
+                let startLimit = 0, endLimit = 9999999;
+                if (rangeInput.includes('-')) {
+                    const p = rangeInput.split('-');
+                    startLimit = parseInt(p[0]); endLimit = parseInt(p[1]);
+                } else if(rangeInput) { startLimit = endLimit = parseInt(rangeInput); }
+                const pName = document.getElementById('personName').value.trim();
+                const bankCode = mainFile.name.substring(0, 3);
+                const bankName = BANK_DICT[bankCode] || "銀行";
+                const accountFmt = `${bankCode}-${mainFile.name.split('.')[0].substring(3).trim()}`;
+                // 套用生日格式化
+                const bDayFormatted = formatBirthday(document.getElementById('muleBirthday').value.trim());
+                const muleInfo = `${document.getElementById('muleName').value}\n${document.getElementById('muleId').value}\n${bDayFormatted}`;
+                const mainData = await readExcel(mainFile);
+                let compareSources = [];
+                for (let file of extraFiles) {
+                    let rows = file.name.toLowerCase().endsWith('.pdf') ? await parsePdf(file) : await readExcel(file);
+                    rows.forEach(r => {
+                        const d = normalizeToRoc(r['交易日期'] || r['日期']);
+                        const t = String(r['交易時間'] || r['時間'] || "").replace(/\D/g,"").padStart(6, '0');
+                        if(d) compareSources.push({
+                            date: d,
+                            timeSec: timeToSeconds(t),
+                            amount: Math.abs(formatMoney(r['金額'] || r['提領金額'])),
+                            loc: String(r['提款所在地點'] || r['地點'] || "").trim(),
+                            addr: String(r['提款機臺地址'] || r['地址'] || "").trim()
+                        });
+                    });
+                }
+                let results = [];
+                let serialNum = 1, sumIn = 0, sumOut = 0;
+                mainData.forEach(row => {
+                    const currentRocDate = normalizeToRoc(row['交易日期'] || row['交易日']);
+                    if (currentRocDate && currentRocDate >= startLimit && currentRocDate <= endLimit) {
+                        const tFmt = String(Math.floor(Number(row['交易時間'] || "0"))).padStart(6, '0');
+                        const rocTimeStr = formatToRocString(currentRocDate, tFmt);
+                        const deposit = formatMoney(row['存入金額']);
+                        if (deposit > 0) {
+                            sumIn += deposit;
+                            results.push([serialNum++, "", `${row['轉出入行庫代碼及帳號'] || ""}\n${row['備註'] || ""}`, "", rocTimeStr, `${pName?pName+'\n':''}${bankName}\n${accountFmt}`, formatMoneyString(deposit), "", "", "", "", "", ""]);
+                        }
+                        const withdraw = formatMoney(row['支出金額']);
+                        if (withdraw > 50) {
+                            const match = compareSources.find(s => s.date === currentRocDate && Math.abs(s.amount - withdraw) < 10 && Math.abs(s.timeSec - timeToSeconds(tFmt)) <= 180);
+                            if (match) {
+                                sumOut += withdraw;
+                                results.push(["", "", "", "", "", "", "", muleInfo, rocTimeStr, `${match.loc}\n(${match.addr})`, formatMoneyString(withdraw), "有", ""]);
+                            }
+                        }
+                    }
+                });
+                const workbook = new ExcelJS.Workbook();
+                const ws = workbook.addWorksheet('提領一覽表', {
+                    pageSetup: { 
+                        paperSize: 9, 
+                        orientation: 'landscape', 
+                        fitToPage: true, 
+                        fitToWidth: 1, 
+                        fitToHeight: 0, 
+                        printTitlesRow: '3:3',
+                        margins: { left: 0.3, right: 0.3, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 }
+                    },
+                    headerFooter: {
+                        oddFooter: "&C第 &P 頁 / 共 &N 頁",
+                        evenFooter: "&C第 &P 頁 / 共 &N 頁"
+                    }
+                });
+                ws.addRow(["被害人帳戶明細及車手提領時間一覽表"]);
+                const hasPerson = pName && String(pName).trim() !== "";
+                const pNameStr = hasPerson ? ` (人頭:${String(pName).trim()})` : '';
+                ws.addRow([`${bankName}${pNameStr} (帳號:${accountFmt})`]);
+                ws.mergeCells('A1:M1'); ws.mergeCells('A2:M2');
+                ws.addRow(["編號", "被害人\n年籍資料", "被害人匯款帳戶", "詐騙方式", "被害人匯款\n日期及時間", "匯入之人頭帳戶", "匯款金額\n(新臺幣)", "提領犯嫌", "提領日期及時間", "提領地點", "提領金額\n(新臺幣)", "有無影像", "備註"]);
+                results.forEach(r => ws.addRow(r));
+                const totalRowNum = ws.rowCount + 1;
+                ws.addRow(["總匯款金額", "", "", "", "", "", formatMoneyString(sumIn), "", "總提領金額", "", formatMoneyString(sumOut), "", ""]);
+                ws.mergeCells(`A${totalRowNum}:F${totalRowNum}`); 
+                ws.mergeCells(`G${totalRowNum}:H${totalRowNum}`); 
+                ws.mergeCells(`I${totalRowNum}:J${totalRowNum}`);
+                ws.mergeCells(`K${totalRowNum}:M${totalRowNum}`);
+                ws.eachRow((row, i) => {
+                    row.eachCell({ includeEmpty: true }, (cell) => {
+                        cell.font = { name: '標楷體', size: 11 };
+                        cell.alignment = { wrapText: true, horizontal: 'center', vertical: 'middle' };
+                        cell.border = { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} };
+                    });
+                    if (i <= 2) { 
+                        ws.getCell(`A${i}`).font = { name:'標楷體', size:16, bold:true }; ws.getCell(`A${i}`).border = {}; row.height = 35;
+                    } else if (i === 3) {
+                        row.eachCell(c => c.font.bold = true); row.height = 45;
+                    } else if (i === totalRowNum) {
+                        row.eachCell(c => { c.font = { name:'標楷體', size:16, bold:true }; }); row.height = 50;
+                    } else { row.height = 70; }
+                });
+                ws.columns.forEach((col, idx) => { col.width = [6, 15, 25, 12, 22, 25, 18, 18, 22, 32, 18, 12, 10][idx]; });
+                const buffer = await workbook.xlsx.writeBuffer();
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(new Blob([buffer]));
+                a.download = `提領一覽表-${bankName}(${accountFmt}).xlsx`;
+                a.click();
+
+            } catch (err) { alert("錯誤：" + err.message); } 
+            finally { btn.disabled = false; loader.classList.add('hidden'); }
+        }
+        async function parsePdf(file) {
+            const pdf = await pdfjsLib.getDocument(await file.arrayBuffer()).promise;
+            let rows = [];
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const text = await page.getTextContent();
+                // 取得純文字陣列
+                const items = text.items.map(it => it.str.trim()).filter(it => it !== "");
+                for (let j = 0; j < items.length; j++) {
+                    // 偵測日期格式 (114或115開頭的7位數)
+                    if (/^11[4-5]\d{4}$/.test(items[j])) {
+                        let row = {
+                            '交易日期': items[j],
+                            '交易時間': "",
+                            '金額': "",
+                            '提款所在地點': "",
+                            '提款機臺地址': ""
+                        };
+                        // 往後掃描 20 個項目以填充欄位
+                        for (let k = 1; k <= 20; k++) {
+                            let val = items[j + k] || "";
+                            if (!val) continue;
+                            // 1. 找時間 (6位數)
+                            if (!row['交易時間'] && /^\d{6}$/.test(val)) {
+                                row['交易時間'] = val;
+                            }
+                            // 2. 找金額 (5位數以上，避開時間)
+                            else if (!row['金額'] && /^\d{4,6}$/.test(val) && val !== row['交易時間']) {
+                                row['金額'] = val;
+                            }
+                            // 3. 找地址 (包含路/號等特徵)
+                            else if (!row['提款機臺地址'] && (val.includes("路") || val.includes("街") || val.includes("號")) && (val.includes("市") || val.includes("區"))) {
+                                row['提款機臺地址'] = val;
+                                // 智慧抓取地點：通常在地址的前 1-2格，或銀行名稱後
+                                // 我們嘗試往前找一個不是純數字、也不是地址本身的字串作為地點
+                                let prevVal = items[j + k - 1] || "";
+                                if (prevVal && !/^\d+$/.test(prevVal) && prevVal !== row['提款機臺地址']) {
+                                    row['提款所在地點'] = prevVal;
+                                }
+                            }
+                        }
+                        // 基本檢核：必須有日、時、金才加入
+                        if (row['交易日期'] && row['交易時間'] && row['金額']) {
+                            // 如果地點還是空的，嘗試補位
+                            if (!row['提款所在地點'] && row['提款機臺地址']) {
+                                row['提款所在地點'] = "查看地址欄位"; 
+                            }
+                            rows.push(row);
+                            j += 1; // 稍微偏移避免重複偵測同一行
+                        }
+                    }
+                }
+            }
+            return rows;
+        }
+        function normalizeToRoc(val) {
+            if (!val) return null;
+            let s = String(val).replace(/\D/g,"");
+            if (s.length >= 8) return (parseInt(s.substring(0,4)) - 1911) * 10000 + parseInt(s.substring(4,8));
+            return parseInt(s);
+        }
+        function timeToSeconds(t) {
+            const h = parseInt(t.slice(0,2)) || 0, m = parseInt(t.slice(2,4)) || 0, s = parseInt(t.slice(4,6)) || 0;
+            return h * 3600 + m * 60 + s;
+        }
+        function formatToRocString(rocDate, tFmt) {
+            const s = String(rocDate);
+            const y = s.length === 7 ? s.substring(0,3) : s.substring(0,2);
+            return `${y}年${s.slice(-4,-2)}月${s.slice(-2)}日\n${tFmt.slice(0,2)}時${tFmt.slice(2,4)}分${tFmt.slice(4,6)}秒`;
+        }
+        function formatMoney(v) { return v ? Math.abs(Number(String(v).replace(/[^\d.]/g, ""))) : 0; }
+        function formatMoneyString(v) { return v ? Number(v).toLocaleString() + "元" : "0元"; }
+        function readExcel(file) {
+            return new Promise(res => {
+                const r = new FileReader();
+                r.onload = e => res(XLSX.utils.sheet_to_json(XLSX.read(e.target.result, {type:'array'}).Sheets[XLSX.read(e.target.result, {type:'array'}).SheetNames[0]]));
+                r.readAsArrayBuffer(file);
+            });
+        }
+//-------------------CSV轉EXCEL----------------------
+        let csvFolderFiles = []; 
+        window.handleFolderSelect = function(e) {
+            csvFolderFiles = Array.from(e.target.files);
+            const statusText = document.getElementById('csvStatusText');
+            const runBtn = document.getElementById('btnRunCsv');
+            if (csvFolderFiles.length > 0) {
+                // 1. 統計子資料夾數量 (透過 webkitRelativePath 解析)
+                const folderPaths = new Set();
+                csvFolderFiles.forEach(file => {
+                    const parts = file.webkitRelativePath.split('/');
+                    if (parts.length > 1) {
+                        // 取到倒數第二層為止的路徑作為資料夾識別
+                        const dirPath = parts.slice(0, -1).join('/');
+                        folderPaths.add(dirPath);
+                    }
+                });
+                const folderCount = folderPaths.size;
+                // 2. 統計可轉換的檔案總數
+                const validFiles = csvFolderFiles.filter(f => {
+                    const n = f.name.toLowerCase();
+                    return n.endsWith('.csv') || n.endsWith('.txt') || 
+                        n.endsWith('.zip') || n.endsWith('.rar') || n.endsWith('.7z');
+                });
+                const fileCount = validFiles.length;
+                // 3. 更新顯示文字
+                if (statusText) {
+                    statusText.innerText = `已載入 ${folderCount} 個資料夾，總共包含 ${fileCount} 個檔案`;
+                }
+                // 顯示執行按鈕
+                if (runBtn && fileCount > 0) {
+                    runBtn.classList.remove('hidden');
+                } else if (fileCount === 0) {
+                    statusText.innerText += " (未偵測到可轉換的 CSV 或壓縮檔)";
+                    runBtn.classList.add('hidden');
+                }
+            }
+        };
+        //核心：智能偵測編碼讀取 (解決亂碼)
+        async function readCsvSmartEncoding(fileBlob) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const buffer = e.target.result;
+                    const uint8 = new Uint8Array(buffer);
+                    let encoding = 'big5';
+                    if (uint8[0] === 0xEF && uint8[1] === 0xBB && uint8[2] === 0xBF) {
+                        encoding = 'utf-8';
+                    } else {
+                        try {
+                            const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
+                            utf8Decoder.decode(uint8);
+                            encoding = 'utf-8';
+                        } catch (err) {
+                            encoding = 'big5';
+                        }
+                    }
+                    const decoder = new TextDecoder(encoding);
+                    const text = decoder.decode(uint8);
+                    const rows = text.split(/\r?\n/).filter(l => l.trim()).map(l => 
+                        l.split(',').map(c => c.trim().replace(/^"|"$/g, ''))
+                    );
+                    resolve(rows);
+                };
+                reader.readAsArrayBuffer(fileBlob);
+            });
+        }
+        //處理並儲存 CSV 內容至 Excel
+        async function processAndSave(blob, targetDirHandle, pathParts, fileName) {
+            const rows = await readCsvSmartEncoding(blob);
+            const excelBuffer = await generateExcelBuffer(rows);
+            const finalFileName = fileName.replace(/\.(csv|txt)$/i, ".xlsx");
+            await writeFileToDisk(targetDirHandle, pathParts, finalFileName, excelBuffer);
+        }
+        //啟動轉檔
+        window.startModernConversion = async function() {
+            if (csvFolderFiles.length === 0) return alert("請先選取來源資料夾");
+
+            try {
+                const targetDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+                const runBtn = document.getElementById('btnRunCsv');
+                runBtn.disabled = true;
+                runBtn.innerText = "深入處理壓縮檔與轉檔中...";
+                let totalSuccess = 0;
+                for (let file of csvFolderFiles) {
+                    const fullPath = file.webkitRelativePath; 
+                    const lowerName = file.name.toLowerCase();
+                    const pathParts = fullPath.split('/'); 
+                    pathParts.shift(); 
+                    const currentFileName = pathParts.pop();
+                    // A. 處理 ZIP
+                    if (lowerName.endsWith('.zip')) {
+                        const zip = await JSZip.loadAsync(file);
+                        const zipFolderName = currentFileName.replace(/\.zip$/i, "");
+                        const zipBaseParts = [...pathParts, zipFolderName];
+
+                        for (let zipEntryName in zip.files) {
+                            const entry = zip.files[zipEntryName];
+                            if (!entry.dir && (zipEntryName.toLowerCase().endsWith('.csv') || zipEntryName.toLowerCase().endsWith('.txt'))) {
+                                const blob = await entry.async("blob");
+                                const entryParts = zipEntryName.split('/');
+                                const fileName = entryParts.pop();
+                                await processAndSave(blob, targetDirHandle, [...zipBaseParts, ...entryParts], fileName);
+                                totalSuccess++;
+                            }
+                        }
+                    }
+                    // B. 處理 RAR 或 7-Zip (使用 libarchive.js)
+                    else if (lowerName.endsWith('.rar') || lowerName.endsWith('.7z')) {
+                        const archive = await LibArchive.extract(file);
+                        const arcFolderName = currentFileName.replace(/\.(rar|7z)$/i, "");
+                        const arcBaseParts = [...pathParts, arcFolderName];
+
+                        for (const entry of archive) {
+                            const entryName = entry.getPath();
+                            if (entry.isFile() && (entryName.toLowerCase().endsWith('.csv') || entryName.toLowerCase().endsWith('.txt'))) {
+                                const blob = await entry.getBlob();
+                                const entryParts = entryName.split('/');
+                                const fileName = entryParts.pop();
+                                await processAndSave(blob, targetDirHandle, [...arcBaseParts, ...entryParts], fileName);
+                                totalSuccess++;
+                            }
+                        }
+                    }
+                    // C. 處理單獨 CSV/TXT
+                    else if (lowerName.endsWith('.csv') || lowerName.endsWith('.txt')) {
+                        await processAndSave(file, targetDirHandle, pathParts, currentFileName);
+                        totalSuccess++;
+                    }
+                }
+                alert(`✅ 轉檔完成！共處理 ${totalSuccess} 個檔案，已解決亂碼並分類。`);
+            } catch (err) {
+                console.error(err);
+                alert("發生錯誤，請確保使用 Chrome/Edge 並給予授權。");
+            } finally {
+                const runBtn = document.getElementById('btnRunCsv');
+                runBtn.disabled = false;
+                runBtn.innerText = "⚡ 選取儲存位置並開始轉檔";
+            }
+        };
+        //寫入硬碟與建立目錄
+        async function writeFileToDisk(rootHandle, pathParts, fileName, content) {
+            let currentHandle = rootHandle;
+            for (const part of pathParts) {
+                if (!part || part === "." || part === "..") continue;
+                currentHandle = await currentHandle.getDirectoryHandle(part, { create: true });
+            }
+            const fileHandle = await currentHandle.getFileHandle(fileName, { create: true });
+            const writable = await fileHandle.createWritable();
+            await writable.write(content);
+            await writable.close();
+        }
+        //Excel 生成 (含補 0)
+        async function generateExcelBuffer(rows) {
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const head = ws[XLSX.utils.encode_cell({r:0, c:C})];
+                if (head && (head.v.toString().includes("時間") || head.v.toString().includes("時"))) {
+                    for (let R = 1; R <= range.e.r; ++R) {
+                        const idx = XLSX.utils.encode_cell({r:R, c:C});
+                        if (ws[idx]) {
+                            let val = String(ws[idx].v);
+                            if (/^\d{5}$/.test(val)) {
+                                ws[idx].v = "0" + val;
+                                ws[idx].t = 's';
+                            }
+                        }
+                    }
+                }
+            }
+            XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+            return XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        }
+    </script>
+</body>
+</html>

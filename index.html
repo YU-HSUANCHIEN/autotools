@@ -1,10 +1,15 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW" class="">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>詐欺小工具</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
@@ -12,165 +17,243 @@
     <script src="https://cdn.jsdelivr.net/npm/libarchive.js/dist/libarchive.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/unrar-js@0.2.3/dist/unrar.min.js"></script>
 </head>
-<body class="bg-slate-50 text-slate-900 h-screen flex">
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100 min-h-screen flex flex-col md:flex-row transition-colors duration-300">
 
-    <div class="w-72 bg-slate-900 flex flex-col shadow-2xl shrink-0">
-        <div class="p-8 text-center border-b border-slate-800">
+    <div class="w-full md:w-72 bg-slate-900 flex flex-col shadow-2xl shrink-0 z-10 border-b border-slate-800 md:border-b-0">
+        <div class="p-6 md:p-8 text-center border-b border-slate-800 relative">
+            <button onclick="toggleDarkMode()" class="absolute top-4 right-4 bg-slate-800 hover:bg-slate-700 text-lg p-2 rounded-xl transition-all shadow-md" title="切換主體模式">
+                <span id="theme-icon">🌙</span>
+            </button>
             <div class="w-16 h-16 bg-sky-500 rounded-2xl flex items-center justify-center text-white text-3xl mx-auto shadow-lg mb-4">⚖️</div>
             <h1 class="text-white font-black text-xl">詐欺小工具</h1>
-            <p class="text-slate-500 text-xs mt-1 uppercase tracking-widest">Version 6.0 </p>
+            <p class="text-slate-500 text-xs mt-1 uppercase tracking-widest">Version 6.6</p>
         </div>
-        <nav class="flex-1 px-4 mt-6">
-            <button onclick="switchTab('withdraw')" id="tabBtn-withdraw" class="w-full flex items-center px-5 py-4 rounded-2xl bg-sky-600 text-white shadow-xl font-bold transition-all">
+        <nav class="flex flex-col sm:flex-row md:flex-col gap-2 p-4 md:px-4 md:mt-6 overflow-x-auto sm:overflow-x-visible">
+            <button onclick="switchTab('withdraw')" id="tabBtn-withdraw" class="whitespace-nowrap flex-1 md:flex-none w-full flex items-center justify-center md:justify-start px-5 py-4 rounded-2xl bg-sky-600 text-white shadow-xl font-bold transition-all">
                 <span class="mr-3">📋</span> 提領一覽表製作
             </button>
-            <button onclick="switchTab('csv')" id="tabBtn-csv" class="w-full flex items-center px-5 py-4 rounded-2xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all font-bold">
+            <button onclick="switchTab('csv')" id="tabBtn-csv" class="whitespace-nowrap flex-1 md:flex-none w-full flex items-center justify-center md:justify-start px-5 py-4 rounded-2xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all font-bold">
                 <span class="mr-3">📂</span> CSV 轉 XLSX
             </button>
-            <button onclick="switchTab('tools')" id="nav-tools" class="w-full flex items-center px-5 py-4 rounded-2xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all font-bold">
+            <button onclick="switchTab('tools')" id="tabBtn-tools" class="whitespace-nowrap flex-1 md:flex-none w-full flex items-center justify-center md:justify-start px-5 py-4 rounded-2xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all font-bold">
                 <span class="mr-3">🛠️</span> 其他小工具
             </button>
         </nav>
-        <div id="libStatus" class="p-4 text-[15px] text-center text-emerald-400 font-bold bg-black/20">✅ 該系統無連線功能</div>
+        <div id="libStatus" class="hidden md:block p-4 text-[15px] text-center text-emerald-400 font-bold bg-black/20 mt-auto">✅ 該系統無連線功能</div>
     </div>
-
-<main class="flex-1 overflow-y-auto p-12">
+    <main class="flex-1 overflow-y-auto p-4 sm:p-8 md:p-12">
         <div class="max-w-5xl mx-auto">
             
             <div id="tab-withdraw">
-                <div class="mb-10">
-                    <h2 class="text-4xl font-black text-slate-800">提領一覽表製作</h2>
-                    <p class="text-slate-500 mt-3">自動比對並整理提領一覽表</p>
+                <div class="mb-8 md:mb-10">
+                    <h2 class="text-3xl md:text-4xl font-black text-slate-800 dark:text-white">提領一覽表製作</h2>
+                    <p class="text-slate-500 dark:text-slate-400 mt-2">自動比對並整理提領一覽表</p>
                 </div>
 
-                <div class="bg-white rounded-[2.5rem] shadow-2xl p-10 border border-slate-100">
-                    <div class="grid grid-cols-2 gap-12">
-                        <div class="space-y-8">
+                <div class="bg-white dark:bg-slate-800 rounded-[2rem] md:rounded-[2.5rem] shadow-2xl p-6 sm:p-10 border border-slate-100 dark:border-slate-700 transition-colors">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+                        <div class="space-y-6 md:space-y-8">
                             <div>
-                                <label class="text-sm font-black text-slate-700 mb-3 block">1. 載入銀行明細 (單選Excel)</label>
-                                <input type="file" id="mainFile" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100 cursor-pointer">
+                                <label class="text-sm font-black text-slate-700 dark:text-slate-300 mb-3 block">1. 載入銀行明細 (單選Excel)</label>
+                                <input type="file" id="mainFile" class="w-full text-sm text-slate-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-sky-50 dark:file:bg-sky-950/50 file:text-sky-700 dark:file:text-sky-400 hover:file:bg-sky-100 cursor-pointer">
                             </div>
                             <div>
-                                <label class="text-sm font-black text-slate-700 mb-3 block">2. 載入熱點資料 (可多選 PDF/Excel)</label>
-                                <input type="file" id="pdfFiles" multiple onchange="updateFileList()" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+                                <label class="text-sm font-black text-slate-700 dark:text-slate-300 mb-3 block">2. 載入熱點資料 (可多選 PDF/Excel)</label>
+                                <input type="file" id="pdfFiles" multiple onchange="updateFileList()" class="w-full text-sm text-slate-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 dark:file:bg-blue-950/50 file:text-blue-700 dark:file:text-blue-400 hover:file:bg-blue-100 cursor-pointer">
                                 
-                                <div id="fileListContainer" class="mt-4 p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200 hidden">
+                                <div id="fileListContainer" class="mt-4 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 hidden">
                                     <p class="text-[11px] font-bold text-slate-400 uppercase mb-2">已選取檔案：</p>
-                                    <ul id="fileNamesDisplay" class="text-xs text-slate-600 space-y-1 list-disc pl-4"></ul>
+                                    <ul id="fileNamesDisplay" class="text-xs text-slate-600 dark:text-slate-400 space-y-1 list-disc pl-4"></ul>
                                 </div>
                             </div>
                         </div>
-
-                        <div class="grid grid-cols-2 gap-5">
-                            <div class="flex flex-col"><span class="text-[11px] font-bold text-slate-500 mb-1">日期範圍 (YYYMMDD-YYYMMDD)</span><input type="text" id="dateRange" placeholder="1140815-1140817" class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-sky-500 outline-none"></div>
-                            <div class="flex flex-col"><span class="text-[11px] font-bold text-slate-500 mb-1">人頭帳戶姓名 (可不填)</span><input type="text" id="personName" placeholder="選填" class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none"></div>
-                            <div class="flex flex-col"><span class="text-[11px] font-bold text-slate-500 mb-1">車手姓名</span><input type="text" id="muleName" class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none"></div>
-                            <div class="flex flex-col"><span class="text-[11px] font-bold text-slate-500 mb-1">車手身分證</span><input type="text" id="muleId" class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none"></div>
-                            <div class="flex flex-col"><span class="text-[11px] font-bold text-slate-500 mb-1">車手生日 (YYYMMDD)</span><input type="text" id="muleBirthday" placeholder="0851108" class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none"></div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                            <div class="flex flex-col">
+                                <span class="text-[11px] font-bold text-slate-500 mb-1">📅 日期範圍 (YYYMMDD-YYYMMDD)</span>
+                                <input type="text" id="dateRange" placeholder="1140815-1140817" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:ring-2 focus:ring-sky-500 outline-none text-slate-900 dark:text-white">
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-[11px] font-bold text-slate-500 mb-1">👤 人頭帳戶姓名 (可不填)</span>
+                                <input type="text" id="personName" placeholder="選填" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm outline-none text-slate-900 dark:text-white">
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-[11px] font-bold text-slate-500 mb-1">🏃 車手姓名</span>
+                                <input type="text" id="muleName" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm outline-none text-slate-900 dark:text-white">
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-[11px] font-bold text-slate-500 mb-1">🪪 車手身分證</span>
+                                <input type="text" id="muleId" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm outline-none text-slate-900 dark:text-white">
+                            </div>
+                            <div class="flex flex-col sm:col-span-2">
+                                <span class="text-[11px] font-bold text-slate-500 mb-1">🎂 車手生日 (YYYMMDD)</span>
+                                <input type="text" id="muleBirthday" placeholder="0851108" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm outline-none text-slate-900 dark:text-white">
+                            </div>
                         </div>
                     </div>
 
-                    <div class="mt-12">
-                        <button onclick="handleProcess()" id="btnStart" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-black py-5 rounded-[1.5rem] shadow-xl transition-all text-lg">開始比對製作</button>
-                        <p id="loadingMsg" class="mt-6 text-center text-sky-600 font-black hidden animate-pulse">正在處理數據並生成提領一覽表...</p>
+                    <div class="mt-10 md:mt-12">
+                        <button onclick="handleProcess()" id="btnStart" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-black py-4 md:py-5 rounded-[1.25rem] md:rounded-[1.5rem] shadow-xl transition-all text-lg">開始比對製作</button>
+                        <p id="loadingMsg" class="mt-6 text-center text-sky-600 dark:text-sky-400 font-black hidden animate-pulse">正在處理數據並生成提領一覽表...</p>
                     </div>
                 </div>
             </div>
+
             <div id="tab-csv" class="hidden">
-                <div class="mb-10">
-                    <h2 class="text-4xl font-black text-slate-800">CSV 批次轉檔工具</h2>
-                    <p class="text-slate-500 mt-3">直接上傳資料夾 (裡面需要包含轉檔的檔案，可以是壓縮檔、csv或txt)</p>
+                <div class="mb-8 md:mb-10">
+                    <h2 class="text-3xl md:text-4xl font-black text-slate-800 dark:text-white">CSV 批次轉檔工具</h2>
+                    <p class="text-slate-500 dark:text-slate-400 mt-2">直接上傳資料夾 (裡面需要包含轉檔的檔案，可以是壓縮檔、csv或txt)</p>
                 </div>
-                <div class="bg-white rounded-[2.5rem] shadow-2xl p-10 border border-slate-100">
-                    <div class="flex flex-col items-center justify-center border-4 border-dashed border-slate-100 rounded-[2rem] py-16 hover:bg-slate-50 transition-colors cursor-pointer" onclick="document.getElementById('csvFolderInput').click()">
+                <div class="bg-white dark:bg-slate-800 rounded-[2rem] md:rounded-[2.5rem] shadow-2xl p-6 sm:p-10 border border-slate-100 dark:border-slate-700 transition-colors">
+                    <div class="flex flex-col items-center justify-center border-4 border-dashed border-slate-200 dark:border-slate-700 rounded-[1.5rem] md:rounded-[2rem] py-12 md:py-16 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors cursor-pointer text-center px-4" onclick="document.getElementById('csvFolderInput').click()">
                         <input type="file" id="csvFolderInput" webkitdirectory directory multiple class="hidden" onchange="handleFolderSelect(event)">
-                        <div class="text-6xl mb-6">📂</div>
-                        <h3 class="text-2xl font-black text-slate-700" id="csvStatusText">點擊選取來源資料夾</h3>
-                        <p class="text-slate-400 text-sm mt-3">上傳後，點擊下方按鈕選取儲存位置</p>
+                        <div class="text-5xl md:text-6xl mb-4 md:mb-6">📂</div>
+                        <h3 class="text-xl md:text-2xl font-black text-slate-700 dark:text-slate-300" id="csvStatusText">點擊選取來源資料夾</h3>
+                        <p class="text-slate-400 text-xs md:text-sm mt-3">上傳後，點擊下方按鈕選取儲存位置</p>
                     </div>
-                    <button id="btnRunCsv" onclick="startModernConversion()" class="w-full mt-10 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-5 rounded-[1.5rem] shadow-xl text-lg hidden transition-all">
+
+                    <div id="progressContainer" class="mt-8 hidden p-6 bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700 rounded-2xl">
+                        <div class="flex justify-between items-center mb-2">
+                            <span id="progressText" class="text-sm font-black text-slate-700 dark:text-slate-300">正在準備轉檔...</span>
+                            <span id="progressPercent" class="text-sm font-black text-emerald-500">0%</span>
+                        </div>
+                        <div class="w-full bg-slate-200 dark:bg-slate-700 h-4 rounded-full overflow-hidden shadow-inner">
+                            <div id="progressBarFill" class="bg-gradient-to-r from-emerald-400 to-teal-500 h-full w-0 transition-all duration-150 rounded-full shadow"></div>
+                        </div>
+                    </div>
+
+                    <button id="btnRunCsv" onclick="startModernConversion()" class="w-full mt-8 md:mt-10 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 md:py-5 rounded-[1.25rem] md:rounded-[1.5rem] shadow-xl text-lg hidden transition-all">
                         選取儲存位置並開始轉檔
                     </button>
+
+                    <div id="errorLogContainer" class="mt-8 hidden">
+                        <h4 class="text-sm font-black text-rose-500 dark:text-rose-400 uppercase tracking-wider mb-3 flex items-center">
+                            <span class="mr-2">⚠️</span> 轉換異常檔案報告 (<span id="errorCount">0</span>)
+                        </h4>
+                        <div class="bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/50 rounded-2xl p-4 max-h-60 overflow-y-auto">
+                            <ul id="errorLogList" class="text-xs text-rose-700 dark:text-rose-300 space-y-1.5 list-disc pl-4 font-mono">
+                                </ul>
+                        </div>
+                    </div>
                 </div>
             </div>
+
             <div id="tab-tools" class="hidden">
-                <div class="mb-10">
-                    <h2 class="text-4xl font-black text-slate-800">其他小工具下載</h2>
-                    <p class="text-slate-500 mt-3">常用輔助軟體快速下載通道</p>
+                <div class="mb-8 md:mb-10">
+                    <h2 class="text-3xl md:text-4xl font-black text-slate-800 dark:text-white">其他小工具下載</h2>
+                    <p class="text-slate-500 dark:text-slate-400 mt-2">常用輔助軟體快速下載通道</p>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div class="bg-white rounded-[2rem] shadow-xl p-8 border border-slate-100 flex flex-col justify-between hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="bg-white dark:bg-slate-800 rounded-[1.5rem] md:rounded-[2rem] shadow-xl p-6 md:p-8 border border-slate-100 dark:border-slate-700 flex flex-col justify-between hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
                         <div>
-                            <div class="w-14 h-14 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center text-3xl mb-6 font-semibold">🌐</div>
-                            <h3 class="text-xl font-black text-slate-800">鴿手</h3>
+                            <div class="w-14 h-14 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-500 rounded-2xl flex items-center justify-center text-3xl mb-6 font-semibold">🌐</div>
+                            <h3 class="text-xl font-black text-slate-800 dark:text-white">鴿手</h3>
                             <p class="text-slate-400 text-sm mt-2 leading-relaxed">查看警政、交通等法規 (含有附屬工具)</p>
                         </div>
-                        <a href="https://pigeonhand.tw/" target="_blank" class="w-full text-center mt-8 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 rounded-[1.25rem] shadow-lg shadow-emerald-100 transition-colors block">
+                        <a href="https://pigeonhand.tw/" target="_blank" class="w-full text-center mt-8 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 rounded-[1.25rem] shadow-lg shadow-emerald-100 dark:shadow-none transition-colors block">
                             🌐 前往
                         </a>
                     </div>
-                    <div class="bg-white rounded-[2rem] shadow-xl p-8 border border-slate-100 flex flex-col justify-between hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+                    <div class="bg-white dark:bg-slate-800 rounded-[1.5rem] md:rounded-[2rem] shadow-xl p-6 md:p-8 border border-slate-100 dark:border-slate-700 flex flex-col justify-between hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
                         <div>
-                            <div class="w-14 h-14 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center text-3xl mb-6 font-semibold">📦</div>
-                            <h3 class="text-xl font-black text-slate-800">貼圖小鴿手</h3>
+                            <div class="w-14 h-14 bg-blue-50 dark:bg-blue-950/50 text-blue-500 rounded-2xl flex items-center justify-center text-3xl mb-6 font-semibold">📦</div>
+                            <h3 class="text-xl font-black text-slate-800 dark:text-white">貼圖小鴿手</h3>
                             <p class="text-slate-400 text-sm mt-2 leading-relaxed">製作照片黏貼表的小程式。 作者 蔡智楷</p>
                         </div>
-                        <a href="https://drive.google.com/file/d/1wHYpgNCXBnpxU0HoLsm5KkLJygh_mJtp/view" target="_blank" class="w-full text-center mt-8 bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 rounded-[1.25rem] shadow-lg shadow-blue-100 transition-colors block">
+                        <a href="https://drive.google.com/file/d/1wHYpgNCXBnpxU0HoLsm5KkLJygh_mJtp/view" target="_blank" class="w-full text-center mt-8 bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 rounded-[1.25rem] shadow-lg shadow-blue-100 dark:shadow-none transition-colors block">
                             📥 下載最新版本
                         </a>
                     </div>
-                    <div class="bg-white rounded-[2rem] shadow-xl p-8 border border-slate-100 flex flex-col justify-between hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+                    <div class="bg-white dark:bg-slate-800 rounded-[1.5rem] md:rounded-[2rem] shadow-xl p-6 md:p-8 border border-slate-100 dark:border-slate-700 flex flex-col justify-between hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
                         <div>
-                            <div class="w-14 h-14 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center text-3xl mb-6 font-semibold">📦</div>
-                            <h3 class="text-xl font-black text-slate-800">金融調閱平台快速轉換Excel小工具</h3>
+                            <div class="w-14 h-14 bg-purple-50 dark:bg-purple-950/50 text-purple-500 rounded-2xl flex items-center justify-center text-3xl mb-6 font-semibold">📦</div>
+                            <h3 class="text-xl font-black text-slate-800 dark:text-white">金融調閱平台快速轉換Excel小工具</h3>
                             <p class="text-slate-400 text-sm mt-2 leading-relaxed">csv轉換excel程式。 作者 廖瑞瑜</p>
                         </div>
-                        <a href="https://drive.google.com/drive/folders/1xdD_0JtqpRFn9WJYXb5CzzjrEo99obAQ" target="_blank" class="w-full text-center mt-8 bg-purple-500 hover:bg-purple-600 text-white font-bold py-4 rounded-[1.25rem] shadow-lg shadow-purple-100 transition-colors block">
+                        <a href="https://drive.google.com/drive/folders/1xdD_0JtqpRFn9WJYXb5CzzjrEo99obAQ" target="_blank" class="w-full text-center mt-8 bg-purple-500 hover:bg-purple-600 text-white font-bold py-4 rounded-[1.25rem] shadow-lg shadow-purple-100 dark:shadow-none transition-colors block">
                             📥 下載最新版本
                         </a>
                     </div>
-                    </div>
+                </div>
             </div>
+
+            <div class="mt-8 bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-inner">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-[12px] font-bold text-slate-400 tracking-wider flex items-center">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 mr-2 animate-ping"></span>本機數據分析日誌 (LOG)
+                    </span>
+                    <button onclick="document.getElementById('systemLog').value=''" class="text-[10px] text-slate-500 hover:text-slate-300 underline font-bold">清除日誌</button>
+                </div>
+                <textarea id="systemLog" readonly class="w-full h-48 bg-slate-950 rounded-xl p-3 font-mono text-[15px] text-emerald-400 border border-slate-800 outline-none resize-none" placeholder="系統等待指令中..."></textarea>
+            </div>
+
         </div>
-</main>
-    <script>
-//------------介面切換邏輯（三頁版）------------
-        function switchTab(tab) {
+    </main>
+    <script type="module">
+        //------------ 日誌輸出函數 ------------
+        window.logMessage = function(text) {
+            const logTextArea = document.getElementById('systemLog');
+            if (!logTextArea) return;
+            const timestamp = new Date().toLocaleTimeString();
+            logTextArea.value += `[${timestamp}] ${text}\n`;
+            logTextArea.scrollTop = logTextArea.scrollHeight;
+        };
+        //------------ 模式切換邏輯 ------------
+        window.toggleDarkMode = function() {
+            const html = document.documentElement;
+            const icon = document.getElementById('theme-icon');
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                icon.innerText = '🌙';
+                localStorage.setItem('theme', 'light');
+                logMessage("切換至：明亮模式");
+            } else {
+                html.classList.add('dark');
+                icon.innerText = '☀️';
+                localStorage.setItem('theme', 'dark');
+                logMessage("切換至：暗黑模式");
+            }
+        };
+        // 頁面初始化載入偏好主題
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+            const icon = document.getElementById('theme-icon');
+            if(icon) icon.innerText = '☀️';
+        }
+        //------------ 介面切換邏輯（掛載至 window） ------------
+        window.switchTab = function(tab) {
             const withdrawTab = document.getElementById('tab-withdraw');
             const csvTab = document.getElementById('tab-csv');
-            const toolsTab = document.getElementById('tab-tools'); // 新增的小工具頁面
+            const toolsTab = document.getElementById('tab-tools');
 
             const btnWithdraw = document.getElementById('tabBtn-withdraw');
             const btnCsv = document.getElementById('tabBtn-csv');
-            const btnTools = document.getElementById('tabBtn-tools'); // 新增的小工具按鈕
+            const btnTools = document.getElementById('tabBtn-tools');
 
-            // --- 1. 預設將所有頁面隱藏 ---
             if (withdrawTab) withdrawTab.classList.add('hidden');
             if (csvTab) csvTab.classList.add('hidden');
             if (toolsTab) toolsTab.classList.add('hidden');
 
-            // --- 2. 預設將所有按鈕恢復成「未選取」的灰色暗色樣式 ---
-            const defaultBtnClass = "w-full flex items-center px-5 py-4 rounded-2xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all font-bold";
+            const defaultBtnClass = "whitespace-nowrap flex-1 md:flex-none w-full flex items-center justify-center md:justify-start px-5 py-4 rounded-2xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all font-bold";
             if (btnWithdraw) btnWithdraw.className = defaultBtnClass;
             if (btnCsv) btnCsv.className = defaultBtnClass;
             if (btnTools) btnTools.className = defaultBtnClass;
 
-            // --- 3. 根據點擊的頁面，單獨打開並套用選取樣式 ---
             if (tab === 'withdraw') {
                 if (withdrawTab) withdrawTab.classList.remove('hidden');
-                if (btnWithdraw) btnWithdraw.className = "w-full flex items-center px-5 py-4 rounded-2xl bg-sky-600 text-white shadow-xl font-bold transition-all";
+                if (btnWithdraw) btnWithdraw.className = "whitespace-nowrap flex-1 md:flex-none w-full flex items-center justify-center md:justify-start px-5 py-4 rounded-2xl bg-sky-600 text-white shadow-xl font-bold transition-all";
             } 
             else if (tab === 'csv') {
                 if (csvTab) csvTab.classList.remove('hidden');
-                if (btnCsv) btnCsv.className = "w-full flex items-center px-5 py-4 rounded-2xl bg-emerald-600 text-white shadow-xl font-bold transition-all";
+                if (btnCsv) btnCsv.className = "whitespace-nowrap flex-1 md:flex-none w-full flex items-center justify-center md:justify-start px-5 py-4 rounded-2xl bg-emerald-600 text-white shadow-xl font-bold transition-all";
             } 
             else if (tab === 'tools') {
                 if (toolsTab) toolsTab.classList.remove('hidden');
-                // 小工具點下去變成質感的深紫色背景
-                if (btnTools) btnTools.className = "w-full flex items-center px-5 py-4 rounded-2xl bg-purple-600 text-white shadow-xl font-bold transition-all";
+                if (btnTools) btnTools.className = "whitespace-nowrap flex-1 md:flex-none w-full flex items-center justify-center md:justify-start px-5 py-4 rounded-2xl bg-purple-600 text-white shadow-xl font-bold transition-all";
             }
-        }
-//------------提領一覽表------------
+            logMessage(`切換系統介面 ➡️ ${tab === 'withdraw' ? '提領一覽表製作' : tab === 'csv' ? 'CSV批次轉檔' : '輔助工具下載'}`);
+        };
+
+        //------------ 提領一覽表核心比對邏輯 ------------
         const BANK_DICT = {"004": "臺灣銀行","005": "臺灣土地銀行","006": "合作金庫商業銀行","007": "第一商業銀行","008": "華南商業銀行",
         "009": "彰化商業銀行","011": "上海商業儲蓄銀行","012": "台北富邦商業銀行","013": "國泰世華商業銀行",
         "016": "高雄銀行","017": "兆豐國際商業銀行","018": "全國農業金庫","020": "日商瑞穗銀行臺北分行",
@@ -198,7 +281,7 @@
         if (pdfjsLib) {
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
         }
-        function updateFileList() {
+        window.updateFileList = function() {
             const input = document.getElementById('pdfFiles');
             const display = document.getElementById('fileNamesDisplay');
             const container = document.getElementById('fileListContainer');
@@ -210,9 +293,10 @@
                     li.textContent = f.name;
                     display.appendChild(li);
                 });
+                logMessage(`已成功選入 ${input.files.length} 個熱點資料對比檔。`);
             } else { container.classList.add('hidden'); }
-        }
-        // 生日格式化邏輯 (0851108 -> 085/11/08)
+        };
+        
         function formatBirthday(val) {
             let s = String(val).replace(/\D/g, "");
             if (s.length === 7) {
@@ -222,13 +306,14 @@
             }
             return val;
         }
-        async function handleProcess() {
+        window.handleProcess = async function() {
             const mainFile = document.getElementById('mainFile').files[0];
             const extraFiles = document.getElementById('pdfFiles').files;
             const btn = document.getElementById('btnStart');
             const loader = document.getElementById('loadingMsg');
             if (!mainFile) return alert("請載入金流主檔案！");
             btn.disabled = true; loader.classList.remove('hidden');
+            logMessage(`開始執行比對工程。主調閱檔案：${mainFile.name}`);
             try {
                 const rangeInput = document.getElementById('dateRange').value.trim();
                 let startLimit = 0, endLimit = 9999999;
@@ -240,11 +325,14 @@
                 const bankCode = mainFile.name.substring(0, 3);
                 const bankName = BANK_DICT[bankCode] || "銀行";
                 const accountFmt = `${bankCode}-${mainFile.name.split('.')[0].substring(3).trim()}`;
-                // 套用生日格式化
                 const bDayFormatted = formatBirthday(document.getElementById('muleBirthday').value.trim());
                 const muleInfo = `${document.getElementById('muleName').value}\n${document.getElementById('muleId').value}\n${bDayFormatted}`;
+                
+                logMessage("正在分析主調閱 Excel 明細欄位...");
                 const mainData = await readExcel(mainFile);
                 let compareSources = [];
+                
+                logMessage(`正在併行剖析 ${extraFiles.length} 個比對明細來源...`);
                 for (let file of extraFiles) {
                     let rows = file.name.toLowerCase().endsWith('.pdf') ? await parsePdf(file) : await readExcel(file);
                     rows.forEach(r => {
@@ -259,6 +347,8 @@
                         });
                     });
                 }
+                
+                logMessage(`熱點載入完畢，累計獲取 ${compareSources.length} 條比對端數據。啟動二進制交叉比對...`);
                 let results = [];
                 let serialNum = 1, sumIn = 0, sumOut = 0;
                 mainData.forEach(row => {
@@ -281,21 +371,15 @@
                         }
                     }
                 });
+                
+                logMessage(`比對計算完成。正在套用辦公公文標準格式、產出正式對照表檔案...`);
                 const workbook = new ExcelJS.Workbook();
                 const ws = workbook.addWorksheet('提領一覽表', {
                     pageSetup: { 
-                        paperSize: 9, 
-                        orientation: 'landscape', 
-                        fitToPage: true, 
-                        fitToWidth: 1, 
-                        fitToHeight: 0, 
-                        printTitlesRow: '3:3',
+                        paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, printTitlesRow: '3:3',
                         margins: { left: 0.3, right: 0.3, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 }
                     },
-                    headerFooter: {
-                        oddFooter: "&C第 &P 頁 / 共 &N 頁",
-                        evenFooter: "&C第 &P 頁 / 共 &N 頁"
-                    }
+                    headerFooter: { oddFooter: "&C第 &P 頁 / 共 &N 頁", evenFooter: "&C第 &P 頁 / 共 &N 頁" }
                 });
                 ws.addRow(["被害人帳戶明細及車手提領時間一覽表"]);
                 const hasPerson = pName && String(pName).trim() !== "";
@@ -330,59 +414,39 @@
                 a.href = URL.createObjectURL(new Blob([buffer]));
                 a.download = `提領一覽表-${bankName}(${accountFmt}).xlsx`;
                 a.click();
+                logMessage("🎉 提領一覽表 Excel 檔案已成功生成並自動啟動本機下載。");
 
-            } catch (err) { alert("錯誤：" + err.message); } 
+            } catch (err) { 
+                alert("錯誤：" + err.message); 
+                logMessage(`❌ 執行階段崩潰：${err.message}`);
+            } 
             finally { btn.disabled = false; loader.classList.add('hidden'); }
-        }
+        };
+
         async function parsePdf(file) {
             const pdf = await pdfjsLib.getDocument(await file.arrayBuffer()).promise;
             let rows = [];
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
                 const text = await page.getTextContent();
-                // 取得純文字陣列
                 const items = text.items.map(it => it.str.trim()).filter(it => it !== "");
                 for (let j = 0; j < items.length; j++) {
-                    // 偵測日期格式 (114或115開頭的7位數)
                     if (/^11[4-5]\d{4}$/.test(items[j])) {
-                        let row = {
-                            '交易日期': items[j],
-                            '交易時間': "",
-                            '金額': "",
-                            '提款所在地點': "",
-                            '提款機臺地址': ""
-                        };
-                        // 往後掃描 20 個項目以填充欄位
+                        let row = { '交易日期': items[j], '交易時間': "", '金額': "", '提款所在地點': "", '提款機臺地址': "" };
                         for (let k = 1; k <= 20; k++) {
                             let val = items[j + k] || "";
                             if (!val) continue;
-                            // 1. 找時間 (6位數)
-                            if (!row['交易時間'] && /^\d{6}$/.test(val)) {
-                                row['交易時間'] = val;
-                            }
-                            // 2. 找金額 (5位數以上，避開時間)
-                            else if (!row['金額'] && /^\d{4,6}$/.test(val) && val !== row['交易時間']) {
-                                row['金額'] = val;
-                            }
-                            // 3. 找地址 (包含路/號等特徵)
+                            if (!row['交易時間'] && /^\d{6}$/.test(val)) { row['交易時間'] = val; }
+                            else if (!row['金額'] && /^\d{4,6}$/.test(val) && val !== row['交易時間']) { row['金額'] = val; }
                             else if (!row['提款機臺地址'] && (val.includes("路") || val.includes("街") || val.includes("號")) && (val.includes("市") || val.includes("區"))) {
                                 row['提款機臺地址'] = val;
-                                // 智慧抓取地點：通常在地址的前 1-2格，或銀行名稱後
-                                // 我們嘗試往前找一個不是純數字、也不是地址本身的字串作為地點
                                 let prevVal = items[j + k - 1] || "";
-                                if (prevVal && !/^\d+$/.test(prevVal) && prevVal !== row['提款機臺地址']) {
-                                    row['提款所在地點'] = prevVal;
-                                }
+                                if (prevVal && !/^\d+$/.test(prevVal) && prevVal !== row['提款機臺地址']) { row['提款所在地點'] = prevVal; }
                             }
                         }
-                        // 基本檢核：必須有日、時、金才加入
                         if (row['交易日期'] && row['交易時間'] && row['金額']) {
-                            // 如果地點還是空的，嘗試補位
-                            if (!row['提款所在地點'] && row['提款機臺地址']) {
-                                row['提款所在地點'] = "查看地址欄位"; 
-                            }
-                            rows.push(row);
-                            j += 1; // 稍微偏移避免重複偵測同一行
+                            if (!row['提款所在地點'] && row['提款機臺地址']) { row['提款所在地點'] = "查看地址欄位"; }
+                            rows.push(row); j += 1;
                         }
                     }
                 }
@@ -413,45 +477,38 @@
                 r.readAsArrayBuffer(file);
             });
         }
-//-------------------CSV轉EXCEL----------------------
+
+        //------------------- CSV 批次轉檔工具升級版 ----------------------
         let csvFolderFiles = []; 
+        let errorLogs = []; 
+
         window.handleFolderSelect = function(e) {
             csvFolderFiles = Array.from(e.target.files);
             const statusText = document.getElementById('csvStatusText');
             const runBtn = document.getElementById('btnRunCsv');
+            
+            document.getElementById('progressContainer').classList.add('hidden');
+            document.getElementById('errorLogContainer').classList.add('hidden');
+            document.getElementById('errorLogList').innerHTML = "";
+            errorLogs = [];
+
             if (csvFolderFiles.length > 0) {
-                // 1. 統計子資料夾數量 (透過 webkitRelativePath 解析)
                 const folderPaths = new Set();
                 csvFolderFiles.forEach(file => {
                     const parts = file.webkitRelativePath.split('/');
-                    if (parts.length > 1) {
-                        // 取到倒數第二層為止的路徑作為資料夾識別
-                        const dirPath = parts.slice(0, -1).join('/');
-                        folderPaths.add(dirPath);
-                    }
+                    if (parts.length > 1) { folderPaths.add(parts.slice(0, -1).join('/')); }
                 });
-                const folderCount = folderPaths.size;
-                // 2. 統計可轉換的檔案總數
                 const validFiles = csvFolderFiles.filter(f => {
                     const n = f.name.toLowerCase();
-                    return n.endsWith('.csv') || n.endsWith('.txt') || 
-                        n.endsWith('.zip') || n.endsWith('.rar') || n.endsWith('.7z');
+                    return n.endsWith('.csv') || n.endsWith('.txt') || n.endsWith('.zip') || n.endsWith('.rar') || n.endsWith('.7z');
                 });
                 const fileCount = validFiles.length;
-                // 3. 更新顯示文字
-                if (statusText) {
-                    statusText.innerText = `已載入 ${folderCount} 個資料夾，總共包含 ${fileCount} 個檔案`;
-                }
-                // 顯示執行按鈕
-                if (runBtn && fileCount > 0) {
-                    runBtn.classList.remove('hidden');
-                } else if (fileCount === 0) {
-                    statusText.innerText += " (未偵測到可轉換的 CSV 或壓縮檔)";
-                    runBtn.classList.add('hidden');
-                }
+                if (statusText) statusText.innerText = `已載入 ${folderPaths.size} 個資料夾，包含 ${fileCount} 個對象檔案`;
+                if (runBtn && fileCount > 0) runBtn.classList.remove('hidden');
+                logMessage(`批次轉檔就緒：成功選入來源資料夾，內含可轉檔項目共 ${fileCount} 個。`);
             }
         };
-        //核心：智能偵測編碼讀取 (解決亂碼)
+
         async function readCsvSmartEncoding(fileBlob) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -459,20 +516,15 @@
                     const buffer = e.target.result;
                     const uint8 = new Uint8Array(buffer);
                     let encoding = 'big5';
-                    if (uint8[0] === 0xEF && uint8[1] === 0xBB && uint8[2] === 0xBF) {
-                        encoding = 'utf-8';
-                    } else {
+                    if (uint8[0] === 0xEF && uint8[1] === 0xBB && uint8[2] === 0xBF) { encoding = 'utf-8'; } 
+                    else {
                         try {
                             const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
-                            utf8Decoder.decode(uint8);
-                            encoding = 'utf-8';
-                        } catch (err) {
-                            encoding = 'big5';
-                        }
+                            utf8Decoder.decode(uint8); encoding = 'utf-8';
+                        } catch (err) { encoding = 'big5'; }
                     }
                     const decoder = new TextDecoder(encoding);
-                    const text = decoder.decode(uint8);
-                    const rows = text.split(/\r?\n/).filter(l => l.trim()).map(l => 
+                    const rows = decoder.decode(uint8).split(/\r?\n/).filter(l => l.trim()).map(l => 
                         l.split(',').map(c => c.trim().replace(/^"|"$/g, ''))
                     );
                     resolve(rows);
@@ -480,80 +532,136 @@
                 reader.readAsArrayBuffer(fileBlob);
             });
         }
-        //處理並儲存 CSV 內容至 Excel
+
         async function processAndSave(blob, targetDirHandle, pathParts, fileName) {
             const rows = await readCsvSmartEncoding(blob);
             const excelBuffer = await generateExcelBuffer(rows);
             const finalFileName = fileName.replace(/\.(csv|txt)$/i, ".xlsx");
             await writeFileToDisk(targetDirHandle, pathParts, finalFileName, excelBuffer);
         }
-        //啟動轉檔
+
+        function updateProgressBar(current, total, currentFileName) {
+            const container = document.getElementById('progressContainer');
+            const pText = document.getElementById('progressText');
+            const pPercent = document.getElementById('progressPercent');
+            const pFill = document.getElementById('progressBarFill');
+            
+            container.classList.remove('hidden');
+            const percent = Math.round((current / total) * 100);
+            pText.innerText = `正在解碼與轉換中... (${current} / ${total})`;
+            pPercent.innerText = `${percent}%`;
+            pFill.style.width = `${percent}%`;
+        }
+
         window.startModernConversion = async function() {
             if (csvFolderFiles.length === 0) return alert("請先選取來源資料夾");
 
+            const validFiles = csvFolderFiles.filter(f => {
+                const n = f.name.toLowerCase();
+                return n.endsWith('.csv') || n.endsWith('.txt') || n.endsWith('.zip') || n.endsWith('.rar') || n.endsWith('.7z');
+            });
+            const totalFiles = validFiles.length;
+            let processedCount = 0;
+            let totalSuccess = 0;
+
             try {
+                logMessage("正在請求本機目標儲存目錄之讀寫權限...");
                 const targetDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
                 const runBtn = document.getElementById('btnRunCsv');
                 runBtn.disabled = true;
-                runBtn.innerText = "深入處理壓縮檔與轉檔中...";
-                let totalSuccess = 0;
+                
+                updateProgressBar(0, totalFiles, "準備初始化");
+                logMessage(`權限驗證通過！正式發動批次清洗任務，目標總量：${totalFiles} 個物件。`);
+                
                 for (let file of csvFolderFiles) {
                     const fullPath = file.webkitRelativePath; 
                     const lowerName = file.name.toLowerCase();
                     const pathParts = fullPath.split('/'); 
                     pathParts.shift(); 
                     const currentFileName = pathParts.pop();
-                    // A. 處理 ZIP
-                    if (lowerName.endsWith('.zip')) {
-                        const zip = await JSZip.loadAsync(file);
-                        const zipFolderName = currentFileName.replace(/\.zip$/i, "");
-                        const zipBaseParts = [...pathParts, zipFolderName];
+                    
+                    if (!lowerName.endsWith('.csv') && !lowerName.endsWith('.txt') && !lowerName.endsWith('.zip') && !lowerName.endsWith('.rar') && !lowerName.endsWith('.7z')) {
+                        continue;
+                    }
 
-                        for (let zipEntryName in zip.files) {
-                            const entry = zip.files[zipEntryName];
-                            if (!entry.dir && (zipEntryName.toLowerCase().endsWith('.csv') || zipEntryName.toLowerCase().endsWith('.txt'))) {
-                                const blob = await entry.async("blob");
-                                const entryParts = zipEntryName.split('/');
-                                const fileName = entryParts.pop();
-                                await processAndSave(blob, targetDirHandle, [...zipBaseParts, ...entryParts], fileName);
-                                totalSuccess++;
+                    processedCount++;
+                    updateProgressBar(processedCount, totalFiles, file.name);
+
+                    try {
+                        if (lowerName.endsWith('.zip')) {
+                            logMessage(`[解壓流] 偵測到壓縮檔，正建立虛擬流解開：${file.name}`);
+                            const zip = await JSZip.loadAsync(file);
+                            const zipBaseParts = [...pathParts, currentFileName.replace(/\.zip$/i, "")];
+
+                            for (let zipEntryName in zip.files) {
+                                const entry = zip.files[zipEntryName];
+                                if (!entry.dir && (zipEntryName.toLowerCase().endsWith('.csv') || zipEntryName.toLowerCase().endsWith('.txt'))) {
+                                    try {
+                                        const blob = await entry.async("blob");
+                                        const entryParts = zipEntryName.split('/');
+                                        await processAndSave(blob, targetDirHandle, [...zipBaseParts, ...entryParts.slice(0,-1)], entryParts.pop());
+                                        totalSuccess++;
+                                    } catch (zipEntryErr) {
+                                        const errMsg = `❌ [壓縮內檔失敗] -> ${zipEntryName}: ${zipEntryErr.message}`;
+                                        errorLogs.push(errMsg); logMessage(errMsg);
+                                    }
+                                }
                             }
                         }
-                    }
-                    // B. 處理 RAR 或 7-Zip (使用 libarchive.js)
-                    else if (lowerName.endsWith('.rar') || lowerName.endsWith('.7z')) {
-                        const archive = await LibArchive.extract(file);
-                        const arcFolderName = currentFileName.replace(/\.(rar|7z)$/i, "");
-                        const arcBaseParts = [...pathParts, arcFolderName];
+                        else if (lowerName.endsWith('.rar') || lowerName.endsWith('.7z')) {
+                            logMessage(`[解壓流] 解開高級封裝：${file.name}`);
+                            const archive = await LibArchive.extract(file);
+                            const arcBaseParts = [...pathParts, currentFileName.replace(/\.(rar|7z)$/i, "")];
 
-                        for (const entry of archive) {
-                            const entryName = entry.getPath();
-                            if (entry.isFile() && (entryName.toLowerCase().endsWith('.csv') || entryName.toLowerCase().endsWith('.txt'))) {
-                                const blob = await entry.getBlob();
-                                const entryParts = entryName.split('/');
-                                const fileName = entryParts.pop();
-                                await processAndSave(blob, targetDirHandle, [...arcBaseParts, ...entryParts], fileName);
-                                totalSuccess++;
+                            for (const entry of archive) {
+                                const entryName = entry.getPath();
+                                if (entry.isFile() && (entryName.toLowerCase().endsWith('.csv') || entryName.toLowerCase().endsWith('.txt'))) {
+                                    try {
+                                        const blob = await entry.getBlob();
+                                        const entryParts = entryName.split('/');
+                                        await processAndSave(blob, targetDirHandle, [...arcBaseParts, ...entryParts.slice(0,-1)], entryParts.pop());
+                                        totalSuccess++;
+                                    } catch (arcEntryErr) {
+                                        const errMsg = `❌ [內層解析異常] -> ${entryName}: ${arcEntryErr.message}`;
+                                        errorLogs.push(errMsg); logMessage(errMsg);
+                                    }
+                                }
                             }
                         }
-                    }
-                    // C. 處理單獨 CSV/TXT
-                    else if (lowerName.endsWith('.csv') || lowerName.endsWith('.txt')) {
-                        await processAndSave(file, targetDirHandle, pathParts, currentFileName);
-                        totalSuccess++;
+                        else if (lowerName.endsWith('.csv') || lowerName.endsWith('.txt')) {
+                            await processAndSave(file, targetDirHandle, pathParts, currentFileName);
+                            totalSuccess++;
+                            logMessage(`[轉換成功] ${currentFileName} 已修正亂碼並匯出為 Excel`);
+                        }
+                    } catch (fileErr) {
+                        const errMsg = `❌ [損毀跳過] 檔案 ${file.name} 毀損或加密，已自動略過以免系統中斷。`;
+                        errorLogs.push(errMsg);
+                        logMessage(errMsg);
                     }
                 }
-                alert(`✅ 轉檔完成！共處理 ${totalSuccess} 個檔案，已解決亂碼並分類。`);
+                document.getElementById('progressText').innerText = `🎉 轉換完全結束！成功輸出共 ${totalSuccess} 個專用活頁簿。`;
+                logMessage(`任務總結：批次作業成功匯出 ${totalSuccess} 筆，異常中斷 ${errorLogs.length} 筆。`);
+                
+                if (errorLogs.length > 0) {
+                    document.getElementById('errorCount').innerText = errorLogs.length;
+                    const logListUl = document.getElementById('errorLogList');
+                    logListUl.innerHTML = "";
+                    errorLogs.forEach(log => {
+                        const li = document.createElement('li'); li.innerText = log; logListUl.appendChild(li);
+                    });
+                    document.getElementById('errorLogContainer').classList.remove('hidden');
+                    alert(`轉檔處理完成！部分檔案有損毀（共 ${errorLogs.length} 件），已跳過並在下方列出詳細錯誤日誌報告。`);
+                } else {
+                    alert(`✅ 完美轉檔成功！共成功導出 ${totalSuccess} 個檔案，完全沒有任何錯誤！`);
+                }
             } catch (err) {
                 console.error(err);
-                alert("發生錯誤，請確保使用 Chrome/Edge 並給予授權。");
+                logMessage(`嚴重系統例外錯誤: ${err.message}`);
+                alert("發生嚴重錯誤，請確保使用 Chrome/Edge 瀏覽器並核予資料夾讀寫授權。");
             } finally {
-                const runBtn = document.getElementById('btnRunCsv');
-                runBtn.disabled = false;
-                runBtn.innerText = "⚡ 選取儲存位置並開始轉檔";
+                document.getElementById('btnRunCsv').disabled = false;
             }
         };
-        //寫入硬碟與建立目錄
         async function writeFileToDisk(rootHandle, pathParts, fileName, content) {
             let currentHandle = rootHandle;
             for (const part of pathParts) {
@@ -562,10 +670,8 @@
             }
             const fileHandle = await currentHandle.getFileHandle(fileName, { create: true });
             const writable = await fileHandle.createWritable();
-            await writable.write(content);
-            await writable.close();
+            await writable.write(content); await writable.close();
         }
-        //Excel 生成 (含補 0)
         async function generateExcelBuffer(rows) {
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.aoa_to_sheet(rows);
@@ -577,10 +683,7 @@
                         const idx = XLSX.utils.encode_cell({r:R, c:C});
                         if (ws[idx]) {
                             let val = String(ws[idx].v);
-                            if (/^\d{5}$/.test(val)) {
-                                ws[idx].v = "0" + val;
-                                ws[idx].t = 's';
-                            }
+                            if (/^\d{5}$/.test(val)) { ws[idx].v = "0" + val; ws[idx].t = 's'; }
                         }
                     }
                 }

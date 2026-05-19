@@ -26,7 +26,7 @@
             </button>
             <div class="w-16 h-16 bg-sky-500 rounded-2xl flex items-center justify-center text-white text-3xl mx-auto shadow-lg mb-4">⚖️</div>
             <h1 class="text-white font-black text-xl">詐欺小工具</h1>
-            <p class="text-slate-500 text-xs mt-1 uppercase tracking-widest">Version 6.6</p>
+            <p class="text-slate-500 text-xs mt-1 uppercase tracking-widest">Version 6.7</p>
         </div>
         <nav class="flex flex-col sm:flex-row md:flex-col gap-2 p-4 md:px-4 md:mt-6 overflow-x-auto sm:overflow-x-visible">
             <button onclick="switchTab('withdraw')" id="tabBtn-withdraw" class="whitespace-nowrap flex-1 md:flex-none w-full flex items-center justify-center md:justify-start px-5 py-4 rounded-2xl bg-sky-600 text-white shadow-xl font-bold transition-all">
@@ -41,6 +41,7 @@
         </nav>
         <div id="libStatus" class="hidden md:block p-4 text-[15px] text-center text-emerald-400 font-bold bg-black/20 mt-auto">✅ 該系統無連線功能</div>
     </div>
+
     <main class="flex-1 overflow-y-auto p-4 sm:p-8 md:p-12">
         <div class="max-w-5xl mx-auto">
             
@@ -67,6 +68,7 @@
                                 </div>
                             </div>
                         </div>
+
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                             <div class="flex flex-col">
                                 <span class="text-[11px] font-bold text-slate-500 mb-1">📅 日期範圍 (YYYMMDD-YYYMMDD)</span>
@@ -178,18 +180,19 @@
 
             <div class="mt-8 bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-inner">
                 <div class="flex justify-between items-center mb-2">
-                    <span class="text-[12px] font-bold text-slate-400 tracking-wider flex items-center">
-                        <span class="w-2 h-2 rounded-full bg-emerald-400 mr-2 animate-ping"></span>本機數據分析日誌 (LOG)
+                    <span class="text-[11px] font-bold text-slate-400 tracking-wider flex items-center">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 mr-2 animate-ping"></span>本機數據 analysis 日誌 (LOG)
                     </span>
                     <button onclick="document.getElementById('systemLog').value=''" class="text-[10px] text-slate-500 hover:text-slate-300 underline font-bold">清除日誌</button>
                 </div>
-                <textarea id="systemLog" readonly class="w-full h-48 bg-slate-950 rounded-xl p-3 font-mono text-[15px] text-emerald-400 border border-slate-800 outline-none resize-none" placeholder="系統等待指令中..."></textarea>
+                <textarea id="systemLog" readonly class="w-full h-64 bg-slate-950 rounded-xl p-3 font-mono text-sm text-emerald-400 border border-slate-800 outline-none resize-none" placeholder="系統等待指令中..."></textarea>
             </div>
 
         </div>
     </main>
+
     <script type="module">
-        //------------ 日誌輸出函數 ------------
+        //------------ 科技感日誌輸出函數 ------------
         window.logMessage = function(text) {
             const logTextArea = document.getElementById('systemLog');
             if (!logTextArea) return;
@@ -197,7 +200,8 @@
             logTextArea.value += `[${timestamp}] ${text}\n`;
             logTextArea.scrollTop = logTextArea.scrollHeight;
         };
-        //------------ 模式切換邏輯 ------------
+
+        //------------ 暗黑模式切換邏輯 ------------
         window.toggleDarkMode = function() {
             const html = document.documentElement;
             const icon = document.getElementById('theme-icon');
@@ -205,20 +209,22 @@
                 html.classList.remove('dark');
                 icon.innerText = '🌙';
                 localStorage.setItem('theme', 'light');
-                logMessage("切換至：淺色模式");
+                logMessage("切換至：明亮模式");
             } else {
                 html.classList.add('dark');
                 icon.innerText = '☀️';
                 localStorage.setItem('theme', 'dark');
-                logMessage("切換至：深色模式");
+                logMessage("切換至：暗黑模式");
             }
         };
+        
         // 頁面初始化載入偏好主題
         if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
             const icon = document.getElementById('theme-icon');
             if(icon) icon.innerText = '☀️';
         }
+
         //------------ 介面切換邏輯（掛載至 window） ------------
         window.switchTab = function(tab) {
             const withdrawTab = document.getElementById('tab-withdraw');
@@ -281,6 +287,7 @@
         if (pdfjsLib) {
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
         }
+        
         window.updateFileList = function() {
             const input = document.getElementById('pdfFiles');
             const display = document.getElementById('fileNamesDisplay');
@@ -306,14 +313,15 @@
             }
             return val;
         }
+        
         window.handleProcess = async function() {
             const mainFile = document.getElementById('mainFile').files[0];
             const extraFiles = document.getElementById('pdfFiles').files;
             const btn = document.getElementById('btnStart');
             const loader = document.getElementById('loadingMsg');
-            if (!mainFile) return alert("請載入金流主檔案！");
+            if (!mainFile) return alert("請載入金流檔案！");
             btn.disabled = true; loader.classList.remove('hidden');
-            logMessage(`開始執行比對工程。主調閱檔案：${mainFile.name}`);
+            logMessage(`開始執行比對工程。金流檔案：${mainFile.name}`);
             try {
                 const rangeInput = document.getElementById('dateRange').value.trim();
                 let startLimit = 0, endLimit = 9999999;
@@ -327,11 +335,9 @@
                 const accountFmt = `${bankCode}-${mainFile.name.split('.')[0].substring(3).trim()}`;
                 const bDayFormatted = formatBirthday(document.getElementById('muleBirthday').value.trim());
                 const muleInfo = `${document.getElementById('muleName').value}\n${document.getElementById('muleId').value}\n${bDayFormatted}`;
-                
-                logMessage("正在分析主調閱 Excel 明細欄位...");
+                logMessage("正在分析金流 Excel 明細欄位...");
                 const mainData = await readExcel(mainFile);
                 let compareSources = [];
-                
                 logMessage(`正在併行剖析 ${extraFiles.length} 個比對明細來源...`);
                 for (let file of extraFiles) {
                     let rows = file.name.toLowerCase().endsWith('.pdf') ? await parsePdf(file) : await readExcel(file);
@@ -347,10 +353,9 @@
                         });
                     });
                 }
-                
                 logMessage(`熱點載入完畢，累計獲取 ${compareSources.length} 條比對端數據。啟動二進制交叉比對...`);
                 let results = [];
-                let serialNum = 1, sumIn = 0, sumOut = 0;
+                let serialNum = 1;
                 mainData.forEach(row => {
                     const currentRocDate = normalizeToRoc(row['交易日期'] || row['交易日']);
                     if (currentRocDate && currentRocDate >= startLimit && currentRocDate <= endLimit) {
@@ -358,21 +363,18 @@
                         const rocTimeStr = formatToRocString(currentRocDate, tFmt);
                         const deposit = formatMoney(row['存入金額']);
                         if (deposit > 0) {
-                            sumIn += deposit;
                             results.push([serialNum++, "", `${row['轉出入行庫代碼及帳號'] || ""}\n${row['備註'] || ""}`, "", rocTimeStr, `${pName?pName+'\n':''}${bankName}\n${accountFmt}`, deposit, "", "", "", "", "", ""]);
                         }
                         const withdraw = formatMoney(row['支出金額']);
                         if (withdraw > 50) {
                             const match = compareSources.find(s => s.date === currentRocDate && Math.abs(s.amount - withdraw) < 10 && Math.abs(s.timeSec - timeToSeconds(tFmt)) <= 180);
                             if (match) {
-                                sumOut += withdraw;
                                 results.push(["", "", "", "", "", "", "", muleInfo, rocTimeStr, `${match.loc}\n(${match.addr})`, withdraw, "有", ""]);
                             }
                         }
                     }
                 });
-                
-                logMessage(`比對計算完成。正在套用制式格式、產出正式對照表檔案...`);
+                logMessage(`比對計算完成。正在套用制定格式、產出正式對照表檔案...`);
                 const workbook = new ExcelJS.Workbook();
                 const ws = workbook.addWorksheet('提領一覽表', {
                     pageSetup: { 
@@ -401,6 +403,7 @@
                 ws.mergeCells(`G${totalRowNum}:H${totalRowNum}`); 
                 ws.mergeCells(`I${totalRowNum}:J${totalRowNum}`);
                 ws.mergeCells(`K${totalRowNum}:M${totalRowNum}`);
+
                 ws.eachRow((row, i) => {
                     row.eachCell({ includeEmpty: true }, (cell) => {
                         cell.font = { name: '標楷體', size: 11 };
@@ -434,7 +437,6 @@
             } 
             finally { btn.disabled = false; loader.classList.add('hidden'); }
         };
-
         async function parsePdf(file) {
             const pdf = await pdfjsLib.getDocument(await file.arrayBuffer()).promise;
             let rows = [];
@@ -481,7 +483,6 @@
             return `${y}年${s.slice(-4,-2)}月${s.slice(-2)}日\n${tFmt.slice(0,2)}時${tFmt.slice(2,4)}分${tFmt.slice(4,6)}秒`;
         }
         function formatMoney(v) { return v ? Math.abs(Number(String(v).replace(/[^\d.]/g, ""))) : 0; }
-        function formatMoneyString(v) { return v ? Number(v).toLocaleString() + "元" : "0元"; }
         function readExcel(file) {
             return new Promise(res => {
                 const r = new FileReader();
@@ -517,7 +518,7 @@
                 const fileCount = validFiles.length;
                 if (statusText) statusText.innerText = `已載入 ${folderPaths.size} 個資料夾，包含 ${fileCount} 個對象檔案`;
                 if (runBtn && fileCount > 0) runBtn.classList.remove('hidden');
-                logMessage(`批次轉檔就緒：成功選入來源資料夾，內含可轉檔項目共 ${fileCount} 個。`);
+                logMessage("批次轉檔就緒：成功選入來源資料夾。");
             }
         };
 
@@ -643,16 +644,17 @@
                         else if (lowerName.endsWith('.csv') || lowerName.endsWith('.txt')) {
                             await processAndSave(file, targetDirHandle, pathParts, currentFileName);
                             totalSuccess++;
-                            logMessage(`[轉換成功] ${currentFileName} 已修正亂碼並匯出為 Excel`);
+                            logMessage(`[轉換成功] ${currentFileName} 已匯出為 Excel`);
                         }
                     } catch (fileErr) {
-                        const errMsg = `❌ [損毀跳過] 檔案 ${file.name} 毀損或加密，已自動略過以免系統中斷。`;
+                        const errMsg = `❌ [損毀跳過] 檔案 ${file.name} 毀損或加密。`;
                         errorLogs.push(errMsg);
                         logMessage(errMsg);
                     }
                 }
-                document.getElementById('progressText').innerText = `🎉 轉換完全結束！成功輸出共 ${totalSuccess} 個專用活頁簿。`;
-                logMessage(`任務總結：批次作業成功匯出 ${totalSuccess} 筆，異常中斷 ${errorLogs.length} 筆。`);
+
+                document.getElementById('progressText').innerText = `🎉 轉換完全結束！成功輸出共 ${totalSuccess} 個活頁簿。`;
+                logMessage(`任務總結：批次作業成功匯出 ${totalSuccess} 筆。`);
                 
                 if (errorLogs.length > 0) {
                     document.getElementById('errorCount').innerText = errorLogs.length;
@@ -684,6 +686,7 @@
             const writable = await fileHandle.createWritable();
             await writable.write(content); await writable.close();
         }
+
         async function generateExcelBuffer(rows) {
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.aoa_to_sheet(rows);

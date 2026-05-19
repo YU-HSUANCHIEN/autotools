@@ -192,7 +192,6 @@
     </main>
 
     <script type="module">
-        //------------ 科技感日誌輸出函數 ------------
         window.logMessage = function(text) {
             const logTextArea = document.getElementById('systemLog');
             if (!logTextArea) return;
@@ -200,8 +199,6 @@
             logTextArea.value += `[${timestamp}] ${text}\n`;
             logTextArea.scrollTop = logTextArea.scrollHeight;
         };
-
-        //------------ 暗黑模式切換邏輯 ------------
         window.toggleDarkMode = function() {
             const html = document.documentElement;
             const icon = document.getElementById('theme-icon');
@@ -209,12 +206,12 @@
                 html.classList.remove('dark');
                 icon.innerText = '🌙';
                 localStorage.setItem('theme', 'light');
-                logMessage("切換至：明亮模式");
+                logMessage("切換至：淺色模式");
             } else {
                 html.classList.add('dark');
                 icon.innerText = '☀️';
                 localStorage.setItem('theme', 'dark');
-                logMessage("切換至：暗黑模式");
+                logMessage("切換至：深色模式");
             }
         };
         
@@ -319,9 +316,9 @@
             const extraFiles = document.getElementById('pdfFiles').files;
             const btn = document.getElementById('btnStart');
             const loader = document.getElementById('loadingMsg');
-            if (!mainFile) return alert("請載入金流主檔案！");
+            if (!mainFile) return alert("請載入銀行明細檔案！");
             btn.disabled = true; loader.classList.remove('hidden');
-            logMessage(`開始執行比對工程。主調閱檔案：${mainFile.name}`);
+            logMessage(`開始執行比對工程。銀行明細檔案：${mainFile.name}`);
             try {
                 const rangeInput = document.getElementById('dateRange').value.trim();
                 let startLimit = 0, endLimit = 9999999;
@@ -336,7 +333,7 @@
                 const bDayFormatted = formatBirthday(document.getElementById('muleBirthday').value.trim());
                 const muleInfo = `${document.getElementById('muleName').value}\n${document.getElementById('muleId').value}\n${bDayFormatted}`;
                 
-                logMessage("正在分析主調閱 Excel 明細欄位...");
+                logMessage("正在分析銀行明細 Excel 明細欄位...");
                 const mainData = await readExcel(mainFile);
                 let compareSources = [];
                 
@@ -356,7 +353,7 @@
                     });
                 }
                 
-                logMessage(`熱點載入完畢，累計獲取 ${compareSources.length} 條比對端數據。啟動二進制交叉比對...`);
+                logMessage(`熱點載入完畢，累計獲取 ${compareSources.length} 條比對端數據。啟動交叉比對...`);
                 let results = [];
                 let serialNum = 1;
                 mainData.forEach(row => {
@@ -378,7 +375,7 @@
                     }
                 });
                 
-                logMessage(`比對計算完成。正在套用辦公公文標準格式、產出正式對照表檔案...`);
+                logMessage(`比對計算完成。正在套用制式格式、產出正式對照表檔案...`);
                 const workbook = new ExcelJS.Workbook();
                 const ws = workbook.addWorksheet('提領一覽表', {
                     pageSetup: { 
@@ -396,7 +393,6 @@
                 results.forEach(r => ws.addRow(r));
                 
                 const totalRowNum = ws.rowCount + 1;
-                // 使用動態 Excel SUM 公式，自動追蹤從第4列到總和列的前一列
                 ws.addRow([
                     "總匯款金額", "", "", "", "", "", 
                     { formula: `SUM(G4:G${totalRowNum-1})` }, 
@@ -415,8 +411,6 @@
                         cell.font = { name: '標楷體', size: 11 };
                         cell.alignment = { wrapText: true, horizontal: 'center', vertical: 'middle' };
                         cell.border = { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} };
-                        
-                        // 金額顯示美化：G欄與K欄只要是第4列（資料列開始）以後就套用千分位加上中文字"元"
                         if (cell.address.startsWith('G') || cell.address.startsWith('K')) {
                             if (i >= 4) {
                                 cell.numFormat = '#,##0"元"';
@@ -438,14 +432,12 @@
                 a.download = `提領一覽表-${bankName}(${accountFmt}).xlsx`;
                 a.click();
                 logMessage("🎉 提領一覽表 Excel 檔案已成功生成並自動啟動本機下載。");
-
             } catch (err) { 
                 alert("錯誤：" + err.message); 
                 logMessage(`❌ 執行階段崩潰：${err.message}`);
             } 
             finally { btn.disabled = false; loader.classList.add('hidden'); }
         };
-
         async function parsePdf(file) {
             const pdf = await pdfjsLib.getDocument(await file.arrayBuffer()).promise;
             let rows = [];
@@ -662,7 +654,7 @@
                     }
                 }
 
-                document.getElementById('progressText').innerText = `🎉 轉換完全結束！成功輸出共 ${totalSuccess} 個專用活頁簿。`;
+                document.getElementById('progressText').innerText = `🎉 轉換完全結束！成功輸出共 ${totalSuccess} 個活頁簿。`;
                 logMessage(`任務總結：批次作業成功匯出 ${totalSuccess} 筆。`);
                 
                 if (errorLogs.length > 0) {

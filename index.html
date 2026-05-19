@@ -26,7 +26,7 @@
             </button>
             <div class="w-16 h-16 bg-sky-500 rounded-2xl flex items-center justify-center text-white text-3xl mx-auto shadow-lg mb-4">⚖️</div>
             <h1 class="text-white font-black text-xl">詐欺小工具</h1>
-            <p class="text-slate-500 text-xs mt-1 uppercase tracking-widest">Version 6.7</p>
+            <p class="text-slate-500 text-xs mt-1 uppercase tracking-widest">Version 6.9</p>
         </div>
         <nav class="flex flex-col sm:flex-row md:flex-col gap-2 p-4 md:px-4 md:mt-6 overflow-x-auto sm:overflow-x-visible">
             <button onclick="switchTab('withdraw')" id="tabBtn-withdraw" class="whitespace-nowrap flex-1 md:flex-none w-full flex items-center justify-center md:justify-start px-5 py-4 rounded-2xl bg-sky-600 text-white shadow-xl font-bold transition-all">
@@ -181,7 +181,7 @@
             <div class="mt-8 bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-inner">
                 <div class="flex justify-between items-center mb-2">
                     <span class="text-[11px] font-bold text-slate-400 tracking-wider flex items-center">
-                        <span class="w-2 h-2 rounded-full bg-emerald-400 mr-2 animate-ping"></span>本機數據 analysis 日誌 (LOG)
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 mr-2 animate-ping"></span>本機數據日誌 (LOG)
                     </span>
                     <button onclick="document.getElementById('systemLog').value=''" class="text-[10px] text-slate-500 hover:text-slate-300 underline font-bold">清除日誌</button>
                 </div>
@@ -192,7 +192,6 @@
     </main>
 
     <script type="module">
-        //------------ 科技感日誌輸出函數 ------------
         window.logMessage = function(text) {
             const logTextArea = document.getElementById('systemLog');
             if (!logTextArea) return;
@@ -200,8 +199,6 @@
             logTextArea.value += `[${timestamp}] ${text}\n`;
             logTextArea.scrollTop = logTextArea.scrollHeight;
         };
-
-        //------------ 暗黑模式切換邏輯 ------------
         window.toggleDarkMode = function() {
             const html = document.documentElement;
             const icon = document.getElementById('theme-icon');
@@ -209,23 +206,19 @@
                 html.classList.remove('dark');
                 icon.innerText = '🌙';
                 localStorage.setItem('theme', 'light');
-                logMessage("切換至：明亮模式");
+                logMessage("切換至：淺色模式");
             } else {
                 html.classList.add('dark');
                 icon.innerText = '☀️';
                 localStorage.setItem('theme', 'dark');
-                logMessage("切換至：暗黑模式");
+                logMessage("切換至：深色模式");
             }
         };
-        
-        // 頁面初始化載入偏好主題
         if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
             const icon = document.getElementById('theme-icon');
             if(icon) icon.innerText = '☀️';
         }
-
-        //------------ 介面切換邏輯（掛載至 window） ------------
         window.switchTab = function(tab) {
             const withdrawTab = document.getElementById('tab-withdraw');
             const csvTab = document.getElementById('tab-csv');
@@ -258,7 +251,6 @@
             }
             logMessage(`切換系統介面 ➡️ ${tab === 'withdraw' ? '提領一覽表製作' : tab === 'csv' ? 'CSV批次轉檔' : '輔助工具下載'}`);
         };
-
         //------------ 提領一覽表核心比對邏輯 ------------
         const BANK_DICT = {"004": "臺灣銀行","005": "臺灣土地銀行","006": "合作金庫商業銀行","007": "第一商業銀行","008": "華南商業銀行",
         "009": "彰化商業銀行","011": "上海商業儲蓄銀行","012": "台北富邦商業銀行","013": "國泰世華商業銀行",
@@ -278,7 +270,7 @@
         "216": "花蓮第二信用合作社","222": "澎湖縣第一信用合作社","223": "澎湖第二信用合作社","224": "金門縣信用合作社",
         "321": "日商三井住友銀行","388": "全盈支付","389": "全支付","390": "悠遊卡公司","391": "一卡通","392": "愛金卡",
         "393": "遠鑫電子票證","394": "國際連","395": "橘子支","396": "街口支付","397": "歐付寶","398": "簡單支付",
-        "600": "農金資訊","700": "中華郵政公司","803": "聯邦商業銀行","805": "遠東國際商業銀行","806": "元大商業銀行",
+        "600": "農金資訊","700": "中華郵政公司","803": "聯班商業銀行","805": "遠東國際商業銀行","806": "元大商業銀行",
         "807": "永豐商業銀行","808": "玉山商業銀行","809": "凱基商業銀行","810": "星展(臺灣)商業銀行",
         "812": "台新國際商業銀行","815": "日盛國際商業銀行","816": "安泰商業銀行","822": "中國信託商業銀行",
         "823": "將來商業銀行","824": "連線商業銀行","826": "樂天國際商業銀行","910": "農會相關單位","951": "北區農會",
@@ -287,7 +279,6 @@
         if (pdfjsLib) {
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
         }
-        
         window.updateFileList = function() {
             const input = document.getElementById('pdfFiles');
             const display = document.getElementById('fileNamesDisplay');
@@ -303,7 +294,6 @@
                 logMessage(`已成功選入 ${input.files.length} 個熱點資料對比檔。`);
             } else { container.classList.add('hidden'); }
         };
-        
         function formatBirthday(val) {
             let s = String(val).replace(/\D/g, "");
             if (s.length === 7) {
@@ -313,15 +303,14 @@
             }
             return val;
         }
-        
         window.handleProcess = async function() {
             const mainFile = document.getElementById('mainFile').files[0];
             const extraFiles = document.getElementById('pdfFiles').files;
             const btn = document.getElementById('btnStart');
             const loader = document.getElementById('loadingMsg');
-            if (!mainFile) return alert("請載入金流檔案！");
+            if (!mainFile) return alert("請載入銀行明細檔案！");
             btn.disabled = true; loader.classList.remove('hidden');
-            logMessage(`開始執行比對工程。金流檔案：${mainFile.name}`);
+            logMessage(`開始執行比對工程。銀行明細檔案：${mainFile.name}`);
             try {
                 const rangeInput = document.getElementById('dateRange').value.trim();
                 let startLimit = 0, endLimit = 9999999;
@@ -335,9 +324,10 @@
                 const accountFmt = `${bankCode}-${mainFile.name.split('.')[0].substring(3).trim()}`;
                 const bDayFormatted = formatBirthday(document.getElementById('muleBirthday').value.trim());
                 const muleInfo = `${document.getElementById('muleName').value}\n${document.getElementById('muleId').value}\n${bDayFormatted}`;
-                logMessage("正在分析金流 Excel 明細欄位...");
+                logMessage("正在分析銀行明細 Excel 明細欄位...");
                 const mainData = await readExcel(mainFile);
                 let compareSources = [];
+                
                 logMessage(`正在併行剖析 ${extraFiles.length} 個比對明細來源...`);
                 for (let file of extraFiles) {
                     let rows = file.name.toLowerCase().endsWith('.pdf') ? await parsePdf(file) : await readExcel(file);
@@ -362,19 +352,20 @@
                         const tFmt = String(Math.floor(Number(row['交易時間'] || "0"))).padStart(6, '0');
                         const rocTimeStr = formatToRocString(currentRocDate, tFmt);
                         const deposit = formatMoney(row['存入金額']);
+                        
                         if (deposit > 0) {
-                            results.push([serialNum++, "", `${row['轉出入行庫代碼及帳號'] || ""}\n${row['備註'] || ""}`, "", rocTimeStr, `${pName?pName+'\n':''}${bankName}\n${accountFmt}`, deposit, "", "", "", "", "", ""]);
+                            results.push([serialNum++, undefined, `${row['轉出入行庫代碼及帳號'] || ""}\n${row['備註'] || ""}`, undefined, rocTimeStr, `${pName?pName+'\n':''}${bankName}\n${accountFmt}`, deposit, undefined, undefined, undefined, undefined, undefined, undefined]);
                         }
                         const withdraw = formatMoney(row['支出金額']);
                         if (withdraw > 50) {
                             const match = compareSources.find(s => s.date === currentRocDate && Math.abs(s.amount - withdraw) < 10 && Math.abs(s.timeSec - timeToSeconds(tFmt)) <= 180);
                             if (match) {
-                                results.push(["", "", "", "", "", "", "", muleInfo, rocTimeStr, `${match.loc}\n(${match.addr})`, withdraw, "有", ""]);
+                                results.push([undefined, undefined, undefined, undefined, undefined, undefined, undefined, muleInfo, rocTimeStr, `${match.loc}\n(${match.addr})`, withdraw, "有", undefined]);
                             }
                         }
                     }
                 });
-                logMessage(`比對計算完成。正在套用制定格式、產出正式對照表檔案...`);
+                logMessage(`比對計算完成。正在套用制式格式、產出正式對照表檔案...`);
                 const workbook = new ExcelJS.Workbook();
                 const ws = workbook.addWorksheet('提領一覽表', {
                     pageSetup: { 
@@ -392,35 +383,32 @@
                 results.forEach(r => ws.addRow(r));
                 const totalRowNum = ws.rowCount + 1;
                 ws.addRow([
-                    "總匯款金額", "", "", "", "", "", 
+                    "總匯款金額", undefined, undefined, undefined, undefined, undefined, 
                     { formula: `SUM(G4:G${totalRowNum-1})` }, 
-                    "", 
-                    "總提領金額", "", 
+                    undefined, 
+                    "總提領金額", undefined, 
                     { formula: `SUM(K4:K${totalRowNum-1})` }, 
-                    "", ""
+                    undefined, undefined
                 ]);
                 ws.mergeCells(`A${totalRowNum}:F${totalRowNum}`); 
                 ws.mergeCells(`G${totalRowNum}:H${totalRowNum}`); 
                 ws.mergeCells(`I${totalRowNum}:J${totalRowNum}`);
                 ws.mergeCells(`K${totalRowNum}:M${totalRowNum}`);
-
                 ws.eachRow((row, i) => {
-                    row.eachCell({ includeEmpty: true }, (cell) => {
+                    row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
                         cell.font = { name: '標楷體', size: 11 };
                         cell.alignment = { wrapText: true, horizontal: 'center', vertical: 'middle' };
                         cell.border = { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} };
-                        if (cell.address.startsWith('G') || cell.address.startsWith('K')) {
-                            if (i >= 4) {
-                                cell.numFormat = '#,##0"元"';
-                            }
+                        if (i >= 4 && (colNumber === 7 || colNumber === 11)) {
+                            cell.numFormat = '#,##0"元"';
                         }
                     });
                     if (i <= 2) { 
                         ws.getCell(`A${i}`).font = { name:'標楷體', size:16, bold:true }; ws.getCell(`A${i}`).border = {}; row.height = 35;
                     } else if (i === 3) {
-                        row.eachCell(c => c.font.bold = true); row.height = 45;
+                        row.eachCell({ includeEmpty: true }, c => c.font.bold = true); row.height = 45;
                     } else if (i === totalRowNum) {
-                        row.eachCell(c => { c.font = { name:'標楷體', size:16, bold:true }; }); row.height = 50;
+                        row.eachCell({ includeEmpty: true }, c => { c.font = { name:'標楷體', size:16, bold:true }; }); row.height = 50;
                     } else { row.height = 70; }
                 });
                 ws.columns.forEach((col, idx) => { col.width = [6, 15, 25, 12, 22, 25, 18, 18, 22, 32, 18, 12, 10][idx]; });
@@ -430,7 +418,6 @@
                 a.download = `提領一覽表-${bankName}(${accountFmt}).xlsx`;
                 a.click();
                 logMessage("🎉 提領一覽表 Excel 檔案已成功生成並自動啟動下載。");
-
             } catch (err) { 
                 alert("錯誤：" + err.message); 
                 logMessage(`❌ 執行階段崩潰：${err.message}`);
@@ -490,21 +477,17 @@
                 r.readAsArrayBuffer(file);
             });
         }
-
         //------------------- CSV 批次轉檔工具升級版 ----------------------
         let csvFolderFiles = []; 
         let errorLogs = []; 
-
         window.handleFolderSelect = function(e) {
             csvFolderFiles = Array.from(e.target.files);
             const statusText = document.getElementById('csvStatusText');
             const runBtn = document.getElementById('btnRunCsv');
-            
             document.getElementById('progressContainer').classList.add('hidden');
             document.getElementById('errorLogContainer').classList.add('hidden');
             document.getElementById('errorLogList').innerHTML = "";
             errorLogs = [];
-
             if (csvFolderFiles.length > 0) {
                 const folderPaths = new Set();
                 csvFolderFiles.forEach(file => {
@@ -521,7 +504,6 @@
                 logMessage("批次轉檔就緒：成功選入來源資料夾。");
             }
         };
-
         async function readCsvSmartEncoding(fileBlob) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -542,33 +524,28 @@
                     );
                     resolve(rows);
                 };
-                reader.readAsArrayBuffer(fileBlob);
+                reader.readAsArrayBuffer(buffer);
             });
         }
-
         async function processAndSave(blob, targetDirHandle, pathParts, fileName) {
             const rows = await readCsvSmartEncoding(blob);
             const excelBuffer = await generateExcelBuffer(rows);
             const finalFileName = fileName.replace(/\.(csv|txt)$/i, ".xlsx");
             await writeFileToDisk(targetDirHandle, pathParts, finalFileName, excelBuffer);
         }
-
         function updateProgressBar(current, total, currentFileName) {
             const container = document.getElementById('progressContainer');
             const pText = document.getElementById('progressText');
             const pPercent = document.getElementById('progressPercent');
             const pFill = document.getElementById('progressBarFill');
-            
             container.classList.remove('hidden');
             const percent = Math.round((current / total) * 100);
             pText.innerText = `正在解碼與轉換中... (${current} / ${total})`;
             pPercent.innerText = `${percent}%`;
             pFill.style.width = `${percent}%`;
         }
-
         window.startModernConversion = async function() {
             if (csvFolderFiles.length === 0) return alert("請先選取來源資料夾");
-
             const validFiles = csvFolderFiles.filter(f => {
                 const n = f.name.toLowerCase();
                 return n.endsWith('.csv') || n.endsWith('.txt') || n.endsWith('.zip') || n.endsWith('.rar') || n.endsWith('.7z');
@@ -576,36 +553,29 @@
             const totalFiles = validFiles.length;
             let processedCount = 0;
             let totalSuccess = 0;
-
             try {
                 logMessage("正在請求本機目標儲存目錄之讀寫權限...");
                 const targetDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
                 const runBtn = document.getElementById('btnRunCsv');
                 runBtn.disabled = true;
-                
                 updateProgressBar(0, totalFiles, "準備初始化");
                 logMessage(`權限驗證通過！正式發動批次清洗任務，目標總量：${totalFiles} 個物件。`);
-                
                 for (let file of csvFolderFiles) {
                     const fullPath = file.webkitRelativePath; 
                     const lowerName = file.name.toLowerCase();
                     const pathParts = fullPath.split('/'); 
                     pathParts.shift(); 
                     const currentFileName = pathParts.pop();
-                    
                     if (!lowerName.endsWith('.csv') && !lowerName.endsWith('.txt') && !lowerName.endsWith('.zip') && !lowerName.endsWith('.rar') && !lowerName.endsWith('.7z')) {
                         continue;
                     }
-
                     processedCount++;
                     updateProgressBar(processedCount, totalFiles, file.name);
-
                     try {
                         if (lowerName.endsWith('.zip')) {
                             logMessage(`[解壓流] 偵測到壓縮檔，正建立虛擬流解開：${file.name}`);
                             const zip = await JSZip.loadAsync(file);
                             const zipBaseParts = [...pathParts, currentFileName.replace(/\.zip$/i, "")];
-
                             for (let zipEntryName in zip.files) {
                                 const entry = zip.files[zipEntryName];
                                 if (!entry.dir && (zipEntryName.toLowerCase().endsWith('.csv') || zipEntryName.toLowerCase().endsWith('.txt'))) {
@@ -625,7 +595,6 @@
                             logMessage(`[解壓流] 解開高級封裝：${file.name}`);
                             const archive = await LibArchive.extract(file);
                             const arcBaseParts = [...pathParts, currentFileName.replace(/\.(rar|7z)$/i, "")];
-
                             for (const entry of archive) {
                                 const entryName = entry.getPath();
                                 if (entry.isFile() && (entryName.toLowerCase().endsWith('.csv') || entryName.toLowerCase().endsWith('.txt'))) {
@@ -652,7 +621,6 @@
                         logMessage(errMsg);
                     }
                 }
-
                 document.getElementById('progressText').innerText = `🎉 轉換完全結束！成功輸出共 ${totalSuccess} 個活頁簿。`;
                 logMessage(`任務總結：批次作業成功匯出 ${totalSuccess} 筆。`);
                 
@@ -686,7 +654,6 @@
             const writable = await fileHandle.createWritable();
             await writable.write(content); await writable.close();
         }
-
         async function generateExcelBuffer(rows) {
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.aoa_to_sheet(rows);

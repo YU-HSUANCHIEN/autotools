@@ -359,14 +359,14 @@
                         const deposit = formatMoney(row['存入金額']);
                         if (deposit > 0) {
                             sumIn += deposit;
-                            results.push([serialNum++, "", `${row['轉出入行庫代碼及帳號'] || ""}\n${row['備註'] || ""}`, "", rocTimeStr, `${pName?pName+'\n':''}${bankName}\n${accountFmt}`, formatMoneyString(deposit), "", "", "", "", "", ""]);
+                            results.push([serialNum++, "", `${row['轉出入行庫代碼及帳號'] || ""}\n${row['備註'] || ""}`, "", rocTimeStr, `${pName?pName+'\n':''}${bankName}\n${accountFmt}`, deposit, "", "", "", "", "", ""]);
                         }
                         const withdraw = formatMoney(row['支出金額']);
                         if (withdraw > 50) {
                             const match = compareSources.find(s => s.date === currentRocDate && Math.abs(s.amount - withdraw) < 10 && Math.abs(s.timeSec - timeToSeconds(tFmt)) <= 180);
                             if (match) {
                                 sumOut += withdraw;
-                                results.push(["", "", "", "", "", "", "", muleInfo, rocTimeStr, `${match.loc}\n(${match.addr})`, formatMoneyString(withdraw), "有", ""]);
+                                results.push(["", "", "", "", "", "", "", muleInfo, rocTimeStr, `${match.loc}\n(${match.addr})`, withdraw, "有", ""]);
                             }
                         }
                     }
@@ -406,6 +406,11 @@
                         cell.font = { name: '標楷體', size: 11 };
                         cell.alignment = { wrapText: true, horizontal: 'center', vertical: 'middle' };
                         cell.border = { top:{style:'thin'}, left:{style:'thin'}, bottom:{style:'thin'}, right:{style:'thin'} };
+                        if (cell.address.startsWith('G') || cell.address.startsWith('K')) {
+                            if (i >= 4) {
+                                cell.numFormat = '#,##0"元"';
+                            }
+                        }
                     });
                     if (i <= 2) { 
                         ws.getCell(`A${i}`).font = { name:'標楷體', size:16, bold:true }; ws.getCell(`A${i}`).border = {}; row.height = 35;

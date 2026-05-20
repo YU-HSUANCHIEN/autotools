@@ -311,9 +311,9 @@
             const extraFiles = document.getElementById('pdfFiles').files;
             const btn = document.getElementById('btnStart');
             const loader = document.getElementById('loadingMsg');
-            if (!mainFile) return alert("請載入金流主檔案！");
+            if (!mainFile) return alert("請載入銀行明細檔案！");
             btn.disabled = true; loader.classList.remove('hidden');
-            logMessage(`開始執行比對工程。主調閱檔案：${mainFile.name}`);
+            logMessage(`開始執行比對。銀行明細檔案：${mainFile.name}`);
             try {
                 const rangeInput = document.getElementById('dateRange').value.trim();
                 let startLimit = 0, endLimit = 9999999;
@@ -328,7 +328,7 @@
                 const bDayFormatted = formatBirthday(document.getElementById('muleBirthday').value.trim());
                 const muleInfo = `${document.getElementById('muleName').value}\n${document.getElementById('muleId').value}\n${bDayFormatted}`;
                 
-                logMessage("正在分析主調閱 Excel 明細欄位...");
+                logMessage("正在分析銀行明細 Excel 明細欄位...");
                 const mainData = await readExcel(mainFile);
                 let compareSources = [];
                 
@@ -348,7 +348,7 @@
                     });
                 }
                 
-                logMessage(`熱點載入完畢，累計獲取 ${compareSources.length} 條比對端數據。啟動二進制交叉比對...`);
+                logMessage(`熱點載入完畢，累計獲取 ${compareSources.length} 條比對端數據。啟動交叉比對...`);
                 let results = [];
                 let serialNum = 1, sumIn = 0, sumOut = 0;
                 mainData.forEach(row => {
@@ -372,7 +372,7 @@
                     }
                 });
                 
-                logMessage(`比對計算完成。正在套用辦公公文標準格式、產出正式對照表檔案...`);
+                logMessage(`比對計算完成。正在套用制式格式、產出正式對照表檔案...`);
                 const workbook = new ExcelJS.Workbook();
                 const ws = workbook.addWorksheet('提領一覽表', {
                     pageSetup: { 
@@ -394,15 +394,15 @@
                 // 1. 用您原始的寫法，同時將「萬能公式」與「預算好的漂亮字串」塞入對應格子中
                 const totalRow = ws.addRow(["總匯款金額", "", "", "", "", "", "", "", "總提領金額", "", "", "", ""]);
 
-                // 2. 設定 G 欄（總匯款金額）：結合公式與預算字串
+                // 1. 設定 G 欄（總匯款金額）：加上 _xlfn. 阻斷 Excel 自動加 @ 
                 totalRow.getCell(7).value = {
-                    formula: `TEXT(SUMPRODUCT(IFERROR(VALUE(SUBSTITUTE(SUBSTITUTE(G4:G${lastDataRow},"元",""),",","")),0)),"#,##0""元""")`,
+                    formula: `_xlfn.TEXT(_xlfn.SUMPRODUCT(_xlfn.IFERROR(_xlfn.VALUE(_xlfn.SUBSTITUTE(_xlfn.SUBSTITUTE(G4:G${lastDataRow},"元",""),",","")),0)),"#,##0""元""")`,
                     result: formatMoneyString(sumIn)
                 };
-
-                // 3. 設定 K 欄（總提領金額）：結合公式與預算字串
+                
+                // 2. 設定 K 欄（總提領金額）：加上 _xlfn. 阻斷 Excel 自動加 @
                 totalRow.getCell(11).value = {
-                    formula: `TEXT(SUMPRODUCT(IFERROR(VALUE(SUBSTITUTE(SUBSTITUTE(K4:K${lastDataRow},"元",""),",","")),0)),"#,##0""元""")`,
+                    formula: `_xlfn.TEXT(_xlfn.SUMPRODUCT(_xlfn.IFERROR(_xlfn.VALUE(_xlfn.SUBSTITUTE(_xlfn.SUBSTITUTE(K4:K${lastDataRow},"元",""),",","")),0)),"#,##0""元""")`,
                     result: formatMoneyString(sumOut)
                 };
                 ws.mergeCells(`A${totalRowNum}:F${totalRowNum}`); 

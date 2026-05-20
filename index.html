@@ -389,23 +389,17 @@
                 ws.addRow(["編號", "被害人\n年籍資料", "被害人匯款帳戶", "詐騙方式", "被害人匯款\n日期及時間", "匯入之人頭帳戶", "匯款金額\n(新臺幣)", "提領犯嫌", "提領日期及時間", "提領地點", "提領金額\n(新臺幣)", "有無影像", "備註"]);
                 results.forEach(r => ws.addRow(r));
                 const totalRowNum = ws.rowCount + 1;
-                const lastDataRow = totalRowNum - 1; // 動態取得最後一行明細的列號
-
-                // 1. 建立總計列基本框架
+                const lastDataRow = totalRowNum - 1;
                 const totalRow = ws.addRow(["總匯款金額", "", "", "", "", "", "", "", "總提領金額", "", "", "", ""]);
-
-                // 2. 設定 G 欄（總匯款金額）：使用 array 型態，強制阻斷 Excel 加 @
                 totalRow.getCell(7).value = {
                     type: 'array',
-                    formula: `TEXT(SUMPRODUCT(IFERROR(VALUE(SUBSTITUTE(SUBSTITUTE(G4:G${lastDataRow},"元",""),",","")),0)),"#,##0""元""")`,
-                    result: formatMoneyString(sumIn) // 提供一個初始預算字串
+                    formula: `TEXT(SUM(IFERROR(SUBSTITUTE(SUBSTITUTE(G4:G${lastDataRow},"元",""),",","")*1,0)),"#,##0""元""")`,
+                    result: formatMoneyString(sumIn)
                 };
-
-                // 3. 設定 K 欄（總提領金額）：使用 array 型態，強制阻斷 Excel 加 @
                 totalRow.getCell(11).value = {
                     type: 'array',
-                    formula: `TEXT(SUMPRODUCT(IFERROR(VALUE(SUBSTITUTE(SUBSTITUTE(K4:K${lastDataRow},"元",""),",","")),0)),"#,##0""元""")`,
-                    result: formatMoneyString(sumOut) // 提供一個初始預算字串
+                    formula: `TEXT(SUM(IFERROR(SUBSTITUTE(SUBSTITUTE(K4:K${lastDataRow},"元",""),",","")*1,0)),"#,##0""元""")`,
+                    result: formatMoneyString(sumOut)
                 };
                 ws.mergeCells(`A${totalRowNum}:F${totalRowNum}`); 
                 ws.mergeCells(`G${totalRowNum}:H${totalRowNum}`); 

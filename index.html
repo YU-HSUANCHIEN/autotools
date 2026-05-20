@@ -391,19 +391,21 @@
                 const totalRowNum = ws.rowCount + 1;
                 const lastDataRow = totalRowNum - 1; // 動態取得最後一行明細的列號
 
-                // 1. 用您原始的寫法，同時將「萬能公式」與「預算好的漂亮字串」塞入對應格子中
+                // 1. 建立總計列基本框架
                 const totalRow = ws.addRow(["總匯款金額", "", "", "", "", "", "", "", "總提領金額", "", "", "", ""]);
 
-                // 1. 設定 G 欄（總匯款金額）：加上 _xlfn. 阻斷 Excel 自動加 @ 
+                // 2. 設定 G 欄（總匯款金額）：使用 array 型態，強制阻斷 Excel 加 @
                 totalRow.getCell(7).value = {
-                    formula: `_xlfn.TEXT(_xlfn.SUMPRODUCT(_xlfn.IFERROR(_xlfn.VALUE(_xlfn.SUBSTITUTE(_xlfn.SUBSTITUTE(G4:G${lastDataRow},"元",""),",","")),0)),"#,##0""元""")`,
-                    result: formatMoneyString(sumIn)
+                    type: 'array',
+                    formula: `TEXT(SUMPRODUCT(IFERROR(VALUE(SUBSTITUTE(SUBSTITUTE(G4:G${lastDataRow},"元",""),",","")),0)),"#,##0""元""")`,
+                    result: formatMoneyString(sumIn) // 提供一個初始預算字串
                 };
-                
-                // 2. 設定 K 欄（總提領金額）：加上 _xlfn. 阻斷 Excel 自動加 @
+
+                // 3. 設定 K 欄（總提領金額）：使用 array 型態，強制阻斷 Excel 加 @
                 totalRow.getCell(11).value = {
-                    formula: `_xlfn.TEXT(_xlfn.SUMPRODUCT(_xlfn.IFERROR(_xlfn.VALUE(_xlfn.SUBSTITUTE(_xlfn.SUBSTITUTE(K4:K${lastDataRow},"元",""),",","")),0)),"#,##0""元""")`,
-                    result: formatMoneyString(sumOut)
+                    type: 'array',
+                    formula: `TEXT(SUMPRODUCT(IFERROR(VALUE(SUBSTITUTE(SUBSTITUTE(K4:K${lastDataRow},"元",""),",","")),0)),"#,##0""元""")`,
+                    result: formatMoneyString(sumOut) // 提供一個初始預算字串
                 };
                 ws.mergeCells(`A${totalRowNum}:F${totalRowNum}`); 
                 ws.mergeCells(`G${totalRowNum}:H${totalRowNum}`); 

@@ -391,15 +391,15 @@
                 const totalRowNum = ws.rowCount + 1;
                 const lastDataRow = totalRowNum - 1;
                 const totalRow = ws.addRow(["總匯款金額", "", "", "", "", "", "", "", "總提領金額", "", "", "", ""]);
-                // 1. 設定 G 欄（總匯款金額）：使用微軟絕對不會加 @ 的 SUMIF 變形字串公式
+                // 1. 設定 G 欄（總匯款金額）：用 INDEX 把冒號藏起來，Excel 看到沒冒號，絕對死都不會加 @
                 totalRow.getCell(7).value = {
-                    formula: `TEXT(SUM(SUMIF(G4:G${lastDataRow},ROW(INDIRECT("1:999999"))&"元")),"#,##0""元""")`,
+                    formula: `TEXT(SUMPRODUCT(IFERROR(VALUE(SUBSTITUTE(SUBSTITUTE(INDEX(G:G,N(IF(1,ROW(G4:G${lastDataRow})))),"元",""),",","")),0)),"#,##0""元""")`,
                     result: formatMoneyString(sumIn)
                 };
                 
-                // 2. 設定 K 欄（總提領金額）：使用微軟絕對不會加 @ 的 SUMIF 變形字串公式
+                // 2. 設定 K 欄（總提領金額）：用 INDEX 把冒號藏起來，Excel 看到沒冒號，絕對死都不會加 @
                 totalRow.getCell(11).value = {
-                    formula: `TEXT(SUM(SUMIF(K4:K${lastDataRow},ROW(INDIRECT("1:999999"))&"元")),"#,##0""元""")`,
+                    formula: `TEXT(SUMPRODUCT(IFERROR(VALUE(SUBSTITUTE(SUBSTITUTE(INDEX(K:K,N(IF(1,ROW(K4:K${lastDataRow})))),"元",""),",","")),0)),"#,##0""元""")`,
                     result: formatMoneyString(sumOut)
                 };
                 ws.mergeCells(`A${totalRowNum}:F${totalRowNum}`); 

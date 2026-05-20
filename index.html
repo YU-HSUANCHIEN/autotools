@@ -391,14 +391,15 @@
                 const totalRowNum = ws.rowCount + 1;
                 const lastDataRow = totalRowNum - 1;
                 const totalRow = ws.addRow(["總匯款金額", "", "", "", "", "", "", "", "總提領金額", "", "", "", ""]);
+                // 1. 設定 G 欄（總匯款金額）：用 -- 取代 VALUE，徹底拔除 @，並強行加總文字
                 totalRow.getCell(7).value = {
-                    type: 'array',
-                    formula: `TEXT(SUM(IFERROR(SUBSTITUTE(SUBSTITUTE(G4:G${lastDataRow},"元",""),",","")*1,0)),"#,##0""元""")`,
+                    formula: `TEXT(SUMPRODUCT(IFERROR(--SUBSTITUTE(SUBSTITUTE(G4:G${lastDataRow},"元",""),",",""),0)),"#,##0""元""")`,
                     result: formatMoneyString(sumIn)
                 };
+                
+                // 2. 設定 K 欄（總提領金額）：用 -- 取代 VALUE，徹底拔除 @，並強行加總文字
                 totalRow.getCell(11).value = {
-                    type: 'array',
-                    formula: `TEXT(SUM(IFERROR(SUBSTITUTE(SUBSTITUTE(K4:K${lastDataRow},"元",""),",","")*1,0)),"#,##0""元""")`,
+                    formula: `TEXT(SUMPRODUCT(IFERROR(--SUBSTITUTE(SUBSTITUTE(K4:K${lastDataRow},"元",""),",",""),0)),"#,##0""元""")`,
                     result: formatMoneyString(sumOut)
                 };
                 ws.mergeCells(`A${totalRowNum}:F${totalRowNum}`); 

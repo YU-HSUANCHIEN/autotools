@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>照片批次排版工具</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- docx.js -->
+  <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+  <style>
+    body {
+      font-family: "標楷體", "DFKai-SB", "BiauKai", serif;
+    }
+    .a4-page {
+      width: 210mm;
+      min-height: 297mm;
+      height: 297mm;
+      background: white;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+      margin: 0 auto 2rem auto;
+      position: relative;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .draggable-card {
+      cursor: grab;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .draggable-card:active {
+      cursor: grabbing;
+    }
+    .draggable-card.dragging {
+      opacity: 0.3;
+      border: 1px dashed #3b82f6;
+    }
+    .draggable-card.drag-over {
+      border: 1px solid #2563eb;
+      transform: scale(1.01);
+    }
+
+    .font-kai {
+      font-family: "標楷體", "DFKai-SB", "BiauKai", serif !important;
+    }
+
+    .text-16pt {
+      font-size: 16px !important;
+      line-height: 1.25 !important;
+    }
+
+    @media print {
+      body {
+        background: white !important;
+        padding: 0 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-area {
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+      }
+      .a4-page {
+        box-shadow: none !important;
+        margin: 0 !important;
+        width: 100% !important;
+        height: 100vh !important;
+        page-break-after: always;
+        break-after: page;
+      }
+      @page {
+        size: A4 portrait;
+        margin: 0;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col font-kai">
+
+  <!-- 頂部列 -->
+  <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between no-print sticky top-0 z-50">
+    <div class="flex items-center gap-3">
+      <div class="p-2 bg-emerald-600 text-white rounded-lg">
+        <i data-lucide="scissors" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h1 class="font-bold text-xl text-slate-900 font-kai">照片排版與LINE智慧分割工具</h1>
+        <p class="text-xs text-slate-500 font-kai">滿版頁面佈局、智慧避縫裁切、隨意拖拉更換位置、完美匯出 Word 與 PDF</p>
+      </div>
+    </div>
+    <div class="flex gap-3">
+      <button id="exportWordBtn" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm font-kai">
+        <i data-lucide="file-text" class="w-4 h-4"></i>
+        匯出 Word (.docx)
+      </button>
+      <button id="printBtn" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm font-kai">
+        <i data-lucide="printer" class="w-4 h-4"></i>
+        列印 / 存為 PDF
+      </button>
+    </div>
+  </header>
+
+  <div class="flex-1 flex overflow-hidden">
+    <!-- 左側設定區 -->
+    <aside class="w-80 bg-white border-r border-slate-200 p-6 overflow-y-auto no-print flex flex-col gap-6 shrink-0 font-kai">
+      
+      <!-- 1. 上傳 LINE 長截圖 -->
+      <section class="bg-emerald-50/50 border border-emerald-200 rounded-xl p-4">
+        <h2 class="text-xs font-semibold text-emerald-800 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+          <i data-lucide="smartphone" class="w-4 h-4 text-emerald-600"></i> LINE 長截圖自動切片
+        </h2>
+        <p class="text-xs text-slate-500 mb-3">智慧在固定目標長度附近尋找縫隙裁切，確保切片長度儘可能一致。</p>
+        
+        <input type="file" id="longFileInput" accept="image/*" class="hidden">
+        <button id="uploadLongBtn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg text-xs font-medium transition flex items-center justify-center gap-2 shadow-sm">
+          <i data-lucide="scissors" class="w-3.5 h-3.5"></i> 上傳 LINE 長截圖
+        </button>
+
+        <div class="mt-3 pt-3 border-t border-emerald-200/60 flex flex-col gap-2">
+          <label class="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+            <input type="checkbox" id="autoDetectCut" checked class="rounded text-emerald-600 focus:ring-emerald-500">
+            啟用避開文字縫隙裁切
+          </label>
+        </div>
+      </section>
+
+      <!-- 2. 普通圖片批次上傳 -->
+      <section>
+        <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">一般單張照片上傳</h2>
+        <div id="dropZone" class="border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-xl p-3 text-center cursor-pointer transition bg-slate-50 hover:bg-blue-50/50 group">
+          <input type="file" id="fileInput" multiple accept="image/*" class="hidden">
+          <i data-lucide="upload-cloud" class="w-6 h-6 mx-auto text-slate-400 group-hover:text-blue-500 mb-1 transition"></i>
+          <p class="text-xs font-medium text-slate-700">選取照片或拖拽至此</p>
+        </div>
+        <div class="flex justify-between items-center mt-2">
+          <span class="text-xs text-slate-500">目前共 <span id="imageCount" class="font-bold text-blue-600">0</span> 張圖檔</span>
+          <button id="clearAllBtn" class="text-xs text-red-500 hover:underline hidden">全部清空</button>
+        </div>
+      </section>
+
+      <hr class="border-slate-100">
+
+      <!-- 3. 排版設定 -->
+      <section class="flex flex-col gap-4">
+        <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">排版佈局與邊距</h2>
+        
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">每頁格式</label>
+          <select id="gridLayout" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            <option value="1x2" selected>一頁左右各 1 張 (1 x 2)</option>
+            <option value="2x1">一頁上下各 1 張 (2 x 1)</option>
+            <option value="1x1">一頁 1 張 (1 x 1)</option>
+            <option value="2x2">一頁 4 張 (2 x 2 四格)</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">頁邊距 (mm)</label>
+            <input type="number" id="pagePadding" value="5" min="0" max="40" class="w-full border border-slate-300 rounded-lg p-2 text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">圖片間距 (mm)</label>
+            <input type="number" id="imageGap" value="3" min="0" max="30" class="w-full border border-slate-300 rounded-lg p-2 text-sm">
+          </div>
+        </div>
+      </section>
+
+      <hr class="border-slate-100">
+
+      <!-- 4. 頁首頁尾 -->
+      <section class="flex flex-col gap-3">
+        <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">頁首頁尾設定</h2>
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">頁首標題文字</label>
+          <input type="text" id="headerTextInput" placeholder="預設：照片黏貼" value="照片黏貼" class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+        </div>
+      </section>
+    </aside>
+
+    <!-- 右側預覽區 -->
+    <main class="flex-1 bg-slate-200/70 p-8 overflow-y-auto print-area">
+      <div id="pagesContainer" class="flex flex-col items-center">
+        <!-- JS 動態產生預覽 A4 頁面 -->
+      </div>
+    </main>
+  </div>
+
+  <script>
+    let imageList = []; 
+    let draggedIndex = null;
+
+    const fileInput = document.getElementById('fileInput');
+    const longFileInput = document.getElementById('longFileInput');
+    const uploadLongBtn = document.getElementById('uploadLongBtn');
+    const dropZone = document.getElementById('dropZone');
+    const imageCount = document.getElementById('imageCount');
+    const clearAllBtn = document.getElementById('clearAllBtn');
+    const gridLayoutSelect = document.getElementById('gridLayout');
+    const pagePaddingInput = document.getElementById('pagePadding');
+    const imageGapInput = document.getElementById('imageGap');
+    const headerTextInput = document.getElementById('headerTextInput');
+    const autoDetectCut = document.getElementById('autoDetectCut');
+    const pagesContainer = document.getElementById('pagesContainer');
+
+    lucide.createIcons();
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+    uploadLongBtn.addEventListener('click', () => longFileInput.click());
+    longFileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) processLongImage(e.target.files[0]);
+    });
+
+    clearAllBtn.addEventListener('click', () => {
+      imageList = [];
+      render();
+    });
+
+    [gridLayoutSelect, pagePaddingInput, imageGapInput, headerTextInput].forEach(el => {
+      el.addEventListener('input', render);
+    });
+
+    function getImageDimensions(url) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve({ width: img.width, height: img.height });
+        img.onerror = () => resolve({ width: 300, height: 200 });
+        img.src = url;
+      });
+    }
+
+    function handleFiles(files) {
+      const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+      let loaded = 0;
+      validFiles.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const dims = await getImageDimensions(e.target.result);
+          imageList.push({
+            id: 'img_' + Math.random().toString(36).substr(2, 9),
+            url: e.target.result,
+            width: dims.width,
+            height: dims.height,
+            time: '',
+            location: '',
+            note: ''
+          });
+          loaded++;
+          if (loaded === validFiles.length) render();
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function processLongImage(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          const imgWidth = img.width;
+          const imgHeight = img.height;
+          
+          const targetSliceHeight = Math.floor(imgWidth * 1.35);
+          const isAuto = autoDetectCut.checked;
+
+          canvas.width = imgWidth;
+          canvas.height = imgHeight;
+          ctx.drawImage(img, 0, 0);
+
+          let currentY = 0;
+          const slices = [];
+
+          while (currentY < imgHeight) {
+            let nextY = currentY + targetSliceHeight;
+
+            if (nextY >= imgHeight) {
+              nextY = imgHeight;
+            } else if (isAuto) {
+              const searchRadius = 120;
+              const scanStart = Math.max(currentY + 200, nextY - searchRadius);
+              const scanEnd = Math.min(imgHeight - 50, nextY + searchRadius);
+              let bestCutY = nextY;
+              let minVariance = Infinity;
+
+              for (let y = scanStart; y < scanEnd; y += 2) {
+                const imgData = ctx.getImageData(0, y, imgWidth, 1).data;
+                let variance = 0;
+                const baseR = imgData[0], baseG = imgData[1], baseB = imgData[2];
+
+                for (let x = 0; x < imgWidth; x += 10) {
+                  const idx = x * 4;
+                  const diff = Math.abs(imgData[idx] - baseR) + Math.abs(imgData[idx+1] - baseG) + Math.abs(imgData[idx+2] - baseB);
+                  variance += diff;
+                }
+
+                if (variance < minVariance) {
+                  minVariance = variance;
+                  bestCutY = y;
+                }
+              }
+              nextY = bestCutY;
+            }
+
+            const sliceHeight = nextY - currentY;
+            const sliceCanvas = document.createElement('canvas');
+            sliceCanvas.width = imgWidth;
+            sliceCanvas.height = sliceHeight;
+            const sliceCtx = sliceCanvas.getContext('2d');
+
+            sliceCtx.drawImage(canvas, 0, currentY, imgWidth, sliceHeight, 0, 0, imgWidth, sliceHeight);
+            slices.push({
+              url: sliceCanvas.toDataURL('image/jpeg', 0.92),
+              width: imgWidth,
+              height: sliceHeight
+            });
+
+            if (nextY >= imgHeight) break;
+            currentY = nextY;
+          }
+
+          slices.forEach(item => {
+            imageList.push({
+              id: 'img_' + Math.random().toString(36).substr(2, 9),
+              url: item.url,
+              width: item.width,
+              height: item.height,
+              time: '',
+              location: '',
+              note: ''
+            });
+          });
+
+          render();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function getGridConfig() {
+      const val = gridLayoutSelect.value;
+      const [rows, cols] = val.split('x').map(Number);
+      return { rows, cols, itemsPerPage: rows * cols, rawValue: val };
+    }
+
+    function render() {
+      imageCount.textContent = imageList.length;
+      clearAllBtn.classList.toggle('hidden', imageList.length === 0);
+
+      const { rows, cols, itemsPerPage } = getGridConfig();
+      const padding = pagePaddingInput.value || 5;
+      const gap = imageGapInput.value || 3;
+      const headerText = headerTextInput.value.trim() || '照片黏貼';
+
+      pagesContainer.innerHTML = '';
+
+      if (imageList.length === 0) {
+        pagesContainer.innerHTML = `
+          <div class="bg-white rounded-2xl p-12 text-center border border-slate-200 max-w-md my-auto font-kai">
+            <i data-lucide="image-plus" class="w-12 h-12 text-slate-300 mx-auto mb-4"></i>
+            <h3 class="font-medium text-slate-700 mb-1">尚未載入任何照片</h3>
+            <p class="text-xs text-slate-400">請從左側點擊上傳 LINE 長截圖或批次照片</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      const totalPages = Math.ceil(imageList.length / itemsPerPage);
+
+      for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
+        const pageEl = document.createElement('div');
+        pageEl.className = 'a4-page portrait p-2 flex flex-col justify-between font-kai';
+        pageEl.style.padding = `${padding}mm`;
+
+        const headerEl = document.createElement('div');
+        headerEl.className = 'w-full text-center font-bold text-2xl text-slate-900 pb-1 border-b-2 border-slate-900 shrink-0 font-kai';
+        headerEl.textContent = headerText;
+
+        const gridEl = document.createElement('div');
+        gridEl.className = 'flex-1 grid w-full my-1 min-h-0';
+        gridEl.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+        gridEl.style.gridTemplateRows = `repeat(${rows}, minmax(0, 1fr))`;
+        gridEl.style.gap = `${gap}mm`;
+
+        const startIndex = pageIdx * itemsPerPage;
+        const pageImages = imageList.slice(startIndex, startIndex + itemsPerPage);
+
+        pageImages.forEach((imgObj, idxInPage) => {
+          const globalIdx = startIndex + idxInPage;
+          const photoNum = globalIdx + 1;
+
+          const card = document.createElement('div');
+          card.className = 'draggable-card relative w-full h-full flex flex-col justify-between items-center group min-h-0 font-kai border border-slate-800 rounded overflow-hidden';
+          card.draggable = true;
+          card.dataset.index = globalIdx;
+
+          const imgBox = document.createElement('div');
+          imgBox.className = 'flex-1 w-full overflow-hidden flex items-center justify-center min-h-0 border-b border-slate-800 p-0 bg-white';
+
+          const img = document.createElement('img');
+          img.src = imgObj.url;
+          img.className = 'w-full h-full object-contain block mx-auto my-auto';
+
+          imgBox.appendChild(img);
+
+          const infoBox = document.createElement('div');
+          infoBox.className = 'w-full text-16pt font-kai space-y-1 p-1.5 text-left shrink-0 bg-white';
+          infoBox.innerHTML = `
+            <div class="flex items-center border-b border-slate-300 pb-0.5">
+              <span class="text-slate-900 font-bold shrink-0 font-kai">編號 ${photoNum}</span>
+            </div>
+            <div class="flex items-center border-b border-slate-300 pb-0.5">
+              <span class="text-slate-900 font-bold shrink-0 font-kai">時間：</span>
+              <input type="text" value="${imgObj.time || ''}" class="w-full outline-none bg-transparent font-kai text-16pt ml-1 text-left" data-field="time">
+            </div>
+            <div class="flex items-center border-b border-slate-300 pb-0.5">
+              <span class="text-slate-900 font-bold shrink-0 font-kai">地點：</span>
+              <input type="text" value="${imgObj.location || ''}" class="w-full outline-none bg-transparent font-kai text-16pt ml-1 text-left" data-field="location">
+            </div>
+            <div class="flex items-center border-b border-slate-300 pb-0.5">
+              <span class="text-slate-900 font-bold shrink-0 font-kai">說明：</span>
+              <input type="text" value="${imgObj.note || ''}" class="w-full outline-none bg-transparent font-kai text-16pt ml-1 text-left" data-field="note">
+            </div>
+          `;
+
+          infoBox.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', (e) => {
+              const field = e.target.dataset.field;
+              imageList[globalIdx][field] = e.target.value;
+            });
+          });
+
+          const delBtn = document.createElement('button');
+          delBtn.className = 'no-print absolute top-1 right-1 bg-red-600/80 hover:bg-red-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition shadow-md z-10';
+          delBtn.innerHTML = `<i data-lucide="x" class="w-3.5 h-3.5"></i>`;
+          delBtn.onclick = (e) => {
+            e.stopPropagation();
+            imageList.splice(globalIdx, 1);
+            render();
+          };
+
+          card.addEventListener('dragstart', () => {
+            draggedIndex = globalIdx;
+            card.classList.add('dragging');
+          });
+
+          card.addEventListener('dragend', () => {
+            card.classList.remove('dragging');
+            document.querySelectorAll('.draggable-card').forEach(c => c.classList.remove('drag-over'));
+          });
+
+          card.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            card.classList.add('drag-over');
+          });
+
+          card.addEventListener('dragleave', () => {
+            card.classList.remove('drag-over');
+          });
+
+          card.addEventListener('drop', (e) => {
+            e.preventDefault();
+            card.classList.remove('drag-over');
+            if (draggedIndex !== null && draggedIndex !== globalIdx) {
+              const item = imageList[draggedIndex];
+              imageList.splice(draggedIndex, 1);
+              imageList.splice(globalIdx, 0, item);
+              render();
+            }
+          });
+
+          card.appendChild(imgBox);
+          card.appendChild(infoBox);
+          card.appendChild(delBtn);
+          gridEl.appendChild(card);
+        });
+
+        const footerEl = document.createElement('div');
+        footerEl.className = 'w-full text-center text-xs text-slate-600 pt-1 border-t border-slate-300 shrink-0 font-kai';
+        footerEl.textContent = `第 ${pageIdx + 1} 頁 共 ${totalPages} 頁`;
+
+        pageEl.appendChild(headerEl);
+        pageEl.appendChild(gridEl);
+        pageEl.appendChild(footerEl);
+
+        pagesContainer.appendChild(pageEl);
+      }
+
+      lucide.createIcons();
+    }
+
+    document.getElementById('printBtn').addEventListener('click', () => {
+      if (imageList.length === 0) return alert('請先上傳圖片！');
+      window.print();
+    });
+
+    // 匯出 Word：精確鎖定單邊尺寸並補齊雙邊寬高，確保 XML 語法 100% 正確
+    document.getElementById('exportWordBtn').addEventListener('click', async () => {
+      if (imageList.length === 0) return alert('請先上傳圖片！');
+
+      try {
+        const docxLib = window.docx || window.Docx;
+        if (!docxLib) {
+          alert('Word 轉換元件載入中，請稍等 3 秒後再試！');
+          return;
+        }
+
+        const alignCenter = docxLib.AlignmentType ? docxLib.AlignmentType.CENTER : "center";
+        const alignLeft = docxLib.AlignmentType ? docxLib.AlignmentType.LEFT : "left";
+        const vAlignCenter = docxLib.VerticalAlign ? docxLib.VerticalAlign.CENTER : "center";
+        const vAlignBottom = docxLib.VerticalAlign ? docxLib.VerticalAlign.BOTTOM : "bottom";
+
+        const FONT_KAI = "標楷體";
+        const { rows, cols, itemsPerPage, rawValue } = getGridConfig();
+        const headerText = headerTextInput.value.trim() || '照片黏貼';
+        const totalPages = Math.ceil(imageList.length / itemsPerPage);
+
+        const pagePaddingMm = Number(pagePaddingInput.value) || 5;
+        const pageMarginDxa = Math.round(pagePaddingMm * 56.7);
+
+        // 精確尺寸 DXA
+        let colWidthDxa, cardHeightDxa;
+
+        if (rawValue === '1x2') {
+          colWidthDxa = 5585;  // 9.85 cm
+          cardHeightDxa = 14232; // 25.1 cm
+        } else if (rawValue === '2x1') {
+          colWidthDxa = 11340; // 20.0 cm
+          cardHeightDxa = 7116;  // 12.55 cm
+        } else {
+          const gapMm = Number(imageGapInput.value) || 3;
+          const gapDxa = Math.round(gapMm * 56.7);
+          const availableWidthDxa = 11906 - (pageMarginDxa * 2);
+          colWidthDxa = Math.floor((availableWidthDxa - ((cols - 1) * gapDxa)) / cols);
+          const availableHeightDxa = 14800 - (pageMarginDxa * 2);
+          cardHeightDxa = Math.floor(availableHeightDxa / rows);
+        }
+
+        const infoHeightDxa = 1900; 
+        const imgCellHeightDxa = Math.max(cardHeightDxa - infoHeightDxa, 2000);
+
+        const borderSolid = { style: docxLib.BorderStyle.SINGLE, size: 6, color: "1E293B" };
+        const borderLight = { style: docxLib.BorderStyle.SINGLE, size: 4, color: "CBD5E1" };
+        const borderNone = { style: docxLib.BorderStyle.NONE };
+        const noBorders = {
+          top: borderNone,
+          bottom: borderNone,
+          left: borderNone,
+          right: borderNone,
+          insideHorizontal: borderNone,
+          insideVertical: borderNone
+        };
+        const zeroMargins = { top: 0, bottom: 0, left: 0, right: 0 };
+
+        // 目標單位 Pt 轉換 (1 cm ≈ 28.3465 pt)
+        const PT_9_7_CM = 12.8 * 28.3465; // 274.96 pt (1x2 照片精確寬度)
+        const PT_9_8_CM = 13.5 * 28.3465; // 277.80 pt (2x1 照片精確高度)
+        const PT_10_16_CM = 13.5 * 28.3465; // 288.00 pt (2x2 照片精確高度)
+
+        const docSections = [];
+
+        for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
+          const startIndex = pageIdx * itemsPerPage;
+          const pageImages = imageList.slice(startIndex, startIndex + itemsPerPage);
+          const tableRows = [];
+
+          for (let r = 0; r < rows; r++) {
+            const rowCells = [];
+
+            for (let c = 0; c < cols; c++) {
+              const imgIdx = r * cols + c;
+              const imgObj = imgIdx < pageImages.length ? pageImages[imgIdx] : null;
+              const globalIdx = startIndex + imgIdx;
+
+              if (!imgObj) {
+                rowCells.push(new docxLib.TableCell({
+                  borders: borderNone,
+                  width: { size: colWidthDxa, type: docxLib.WidthType.DXA },
+                  children: [new docxLib.Paragraph({})]
+                }));
+                continue;
+              }
+
+              const origW = imgObj.width || 300;
+              const origH = imgObj.height || 200;
+              
+              let targetWidthPt, targetHeightPt;
+
+              if (rawValue === '1x2') {
+                // 1x2：寬度精確為 9.7 cm，高度等比例算出來傳給 docx.js
+                targetWidthPt = PT_9_7_CM;
+                targetHeightPt = (origH / origW) * targetWidthPt;
+              } else if (rawValue === '2x1') {
+                // 2x1：高度精確為 9.8 cm，寬度等比例算出來傳給 docx.js
+                targetHeightPt = PT_9_8_CM;
+                targetWidthPt = (origW / origH) * targetHeightPt;
+              } else if (rawValue === '2x2') {
+                // 2x2：高度精確為 10.16 cm，寬度等比例算出來傳給 docx.js
+                targetHeightPt = PT_10_16_CM;
+                targetWidthPt = (origW / origH) * targetHeightPt;
+              } else {
+                targetWidthPt = (colWidthDxa / 20) - 10;
+                targetHeightPt = (origH / origW) * targetWidthPt;
+              }
+
+              rowCells.push(new docxLib.TableCell({
+                borders: { top: borderSolid, bottom: borderSolid, left: borderSolid, right: borderSolid },
+                width: { size: colWidthDxa, type: docxLib.WidthType.DXA },
+                margins: zeroMargins,
+                verticalAlign: vAlignBottom,
+                children: [
+                  // 上半部照片區
+                  new docxLib.Table({
+                    width: { size: colWidthDxa, type: docxLib.WidthType.DXA },
+                    borders: noBorders,
+                    rows: [
+                      new docxLib.TableRow({
+                        height: { value: imgCellHeightDxa, rule: docxLib.HeightRule.EXACTLY },
+                        children: [
+                          new docxLib.TableCell({
+                            borders: borderNone,
+                            verticalAlign: vAlignCenter,
+                            margins: zeroMargins,
+                            children: [
+                              new docxLib.Paragraph({
+                                alignment: alignCenter,
+                                spacing: { before: 0, after: 0 },
+                                children: [
+                                  new docxLib.ImageRun({
+                                    data: imgObj.url,
+                                    transformation: {
+                                      width: Math.round(targetWidthPt),
+                                      height: Math.round(targetHeightPt)
+                                    }
+                                  })
+                                ]
+                              })
+                            ]
+                          })
+                        ]
+                      })
+                    ]
+                  }),
+                  // 下半部文字資訊區
+                  new docxLib.Table({
+                    width: { size: colWidthDxa, type: docxLib.WidthType.DXA },
+                    borders: noBorders,
+                    rows: [
+                      new docxLib.TableRow({
+                        children: [new docxLib.TableCell({
+                          borders: { top: borderSolid, bottom: borderLight },
+                          margins: { top: 20, bottom: 20, left: 80, right: 80 },
+                          children: [new docxLib.Paragraph({
+                            alignment: alignLeft,
+                            spacing: { before: 0, after: 0 },
+                            children: [
+                              new docxLib.TextRun({ text: `編號 ${globalIdx + 1}`, size: 26, font: FONT_KAI })
+                            ]
+                          })]
+                        })]
+                      }),
+                      new docxLib.TableRow({
+                        children: [new docxLib.TableCell({
+                          borders: { bottom: borderLight },
+                          margins: { top: 20, bottom: 20, left: 80, right: 80 },
+                          children: [new docxLib.Paragraph({
+                            alignment: alignLeft,
+                            spacing: { before: 0, after: 0 },
+                            children: [
+                              new docxLib.TextRun({ text: "時間：", bold: true, size: 26, font: FONT_KAI }),
+                              new docxLib.TextRun({ text: imgObj.time || "", size: 26, font: FONT_KAI })
+                            ]
+                          })]
+                        })]
+                      }),
+                      new docxLib.TableRow({
+                        children: [new docxLib.TableCell({
+                          borders: { bottom: borderLight },
+                          margins: { top: 20, bottom: 20, left: 80, right: 80 },
+                          children: [new docxLib.Paragraph({
+                            alignment: alignLeft,
+                            spacing: { before: 0, after: 0 },
+                            children: [
+                              new docxLib.TextRun({ text: "地點：", bold: true, size: 26, font: FONT_KAI }),
+                              new docxLib.TextRun({ text: imgObj.location || "", size: 26, font: FONT_KAI })
+                            ]
+                          })]
+                        })]
+                      }),
+                      new docxLib.TableRow({
+                        children: [new docxLib.TableCell({
+                          borders: borderNone,
+                          margins: { top: 20, bottom: 20, left: 80, right: 80 },
+                          children: [new docxLib.Paragraph({
+                            alignment: alignLeft,
+                            spacing: { before: 0, after: 0 },
+                            children: [
+                              new docxLib.TextRun({ text: "說明：", bold: true, size: 26, font: FONT_KAI }),
+                              new docxLib.TextRun({ text: imgObj.note || "", size: 26, font: FONT_KAI })
+                            ]
+                          })]
+                        })]
+                      })
+                    ]
+                  })
+                ]
+              }));
+            }
+
+            tableRows.push(new docxLib.TableRow({
+              height: { value: cardHeightDxa, rule: docxLib.HeightRule.EXACTLY },
+              cantSplit: true,
+              children: rowCells
+            }));
+          }
+
+          const gridTable = new docxLib.Table({
+            rows: tableRows,
+            borders: noBorders,
+            width: { size: colWidthDxa * cols, type: docxLib.WidthType.DXA },
+            alignment: alignCenter
+          });
+
+          docSections.push({
+            properties: {
+              page: {
+                margin: { top: pageMarginDxa, bottom: pageMarginDxa, left: pageMarginDxa, right: pageMarginDxa }
+              }
+            },
+            headers: {
+              default: new docxLib.Header({
+                children: [
+                  new docxLib.Paragraph({
+                    alignment: alignCenter,
+                    children: [
+                      new docxLib.TextRun({ text: headerText, bold: true, size: 40, font: FONT_KAI }),
+                    ],
+                    spacing: { before: 0, after: 30 }
+                  }),
+                ],
+              }),
+            },
+            footers: {
+              default: new docxLib.Footer({
+                children: [
+                  new docxLib.Paragraph({
+                    alignment: alignCenter,
+                    children: [
+                      new docxLib.TextRun({ text: `第 ${pageIdx + 1} 頁 共 ${totalPages} 頁`, size: 20, font: FONT_KAI })
+                    ],
+                    spacing: { before: 20, after: 0 }
+                  })
+                ]
+              })
+            },
+            children: [gridTable]
+          });
+        }
+
+        const doc = new docxLib.Document({
+          sections: docSections
+        });
+
+        const blob = await docxLib.Packer.toBlob(doc);
+        
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `照片黏貼_${new Date().toISOString().slice(0, 10)}.docx`;
+        a.click();
+
+      } catch (err) {
+        console.error(err);
+        alert('匯出 Word 時發生錯誤：' + err.message);
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>

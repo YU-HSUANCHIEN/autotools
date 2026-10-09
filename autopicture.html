@@ -40,8 +40,8 @@
       border: 1px dashed #3b82f6;
     }
     .draggable-card.drag-over {
-      border: 1px solid #2563eb;
-      transform: scale(1.01);
+      border: 2px solid #2563eb;
+      transform: scale(1.02);
     }
 
     .font-kai {
@@ -91,7 +91,7 @@
       </div>
       <div>
         <h1 class="font-bold text-xl text-slate-900 font-kai">照片排版與LINE長截圖智慧分割工具</h1>
-        <p class="text-xs text-slate-500 font-kai">滿版頁面佈局、智慧避縫裁切、隨意拖拉更換位置、匯出 Word 與 PDF</p>
+        <p class="text-xs text-slate-500 font-kai">滿版頁面佈局、智慧避縫裁切、右側小圖快速排序、匯出 Word 與 PDF</p>
       </div>
     </div>
     <div class="flex gap-3">
@@ -145,19 +145,15 @@
       </section>
 
       <!-- 3. 排版設定 -->
-      <!-- 摺疊式下拉選單：排版佈局與邊距 -->
       <details class="bg-slate-50/80 border border-slate-200 rounded-xl overflow-hidden group">
-        <!-- 標題按鈕（點擊可展開/收合） -->
         <summary class="p-4 cursor-pointer flex items-center justify-between text-xs font-semibold text-slate-700 uppercase tracking-wider select-none hover:bg-slate-100/80 transition">
           <div class="flex items-center gap-1.5">
             <i data-lucide="layout-grid" class="w-4 h-4 text-slate-500"></i>
             <span>排版佈局與邊距</span>
           </div>
-          <!-- 摺疊小箭頭圖示 -->
           <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 transition-transform duration-200 group-open:rotate-180"></i>
         </summary>
 
-        <!-- 展開後的內容區塊 -->
         <div class="px-4 pb-4 pt-1 flex flex-col gap-4 border-t border-slate-200/60">
           <div>
             <label class="block text-xs font-medium text-slate-700 mb-1">每頁格式</label>
@@ -182,36 +178,29 @@
         </div>
       </details>
 
-      <!-- 4. 頁首頁尾 -->
+      <!-- 4. 頁首頁尾批次設定 -->
       <details class="bg-blue-50/50 border border-blue-200 rounded-xl overflow-hidden group">
-        <!-- 標題按鈕（點擊可展開/收合） -->
         <summary class="p-4 cursor-pointer flex items-center justify-between text-xs font-semibold text-blue-900 uppercase tracking-wider select-none hover:bg-blue-100/50 transition">
           <div class="flex items-center gap-1.5">
             <i data-lucide="sliders" class="w-4 h-4 text-blue-600"></i>
             <span>標題、時間、地點批次設定</span>
           </div>
-          <!-- 摺疊小箭頭圖示 -->
           <i data-lucide="chevron-down" class="w-4 h-4 text-blue-600 transition-transform duration-200 group-open:rotate-180"></i>
         </summary>
 
-        <!-- 展開後的內容區塊 -->
         <div class="px-4 pb-4 pt-1 flex flex-col gap-3 border-t border-blue-200/60">
-          <!-- 1. 頁首標題 -->
           <div>
             <label class="block text-xs font-medium text-slate-700 mb-1">標題文字</label>
             <input type="text" id="headerTextInput" placeholder="預設：照片黏貼" value="照片黏貼" class="w-full border border-slate-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none bg-white">
           </div>
-          <!-- 2. 統一時間 -->
           <div>
             <label class="block text-xs font-medium text-slate-700 mb-1">統一時間</label>
             <input type="text" id="batchTimeInput" placeholder="例：115年10月08日12時00分" class="w-full border border-slate-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none bg-white">
           </div>
-          <!-- 3. 統一地點 -->
           <div>
             <label class="block text-xs font-medium text-slate-700 mb-1">統一地點</label>
             <input type="text" id="batchLocationInput" placeholder="例：臺中市大里區" class="w-full border border-slate-300 rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none bg-white">
           </div>
-          <!-- 4. 套用按鈕 -->
           <button id="applyBatchBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-xs font-medium transition flex items-center justify-center gap-1.5 shadow-sm mt-1">
             <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> 套用至所有照片
           </button>
@@ -219,12 +208,35 @@
       </details>
     </aside>
 
-    <!-- 右側預覽區 -->
+    <!-- 中間大圖預覽區 -->
     <main class="flex-1 bg-slate-200/70 p-8 overflow-y-auto print-area">
       <div id="pagesContainer" class="flex flex-col items-center">
         <!-- JS 動態產生預覽 A4 頁面 -->
       </div>
     </main>
+
+    <!-- 右側縮圖排序區（可收合抽屜式） -->
+    <aside id="rightSidebar" class="relative bg-white border-l border-slate-200 transition-all duration-300 no-print shrink-0 font-kai w-64">
+      
+      <!-- 側邊欄切換開關按鈕（掛在邊欄左側） -->
+      <button id="toggleRightSidebar" title="展開/收合排序邊欄" class="absolute -left-8 top-4 bg-white border border-slate-300 border-r-0 rounded-l-lg p-1.5 shadow-md hover:bg-slate-50 text-slate-600 transition flex items-center justify-center z-10">
+        <i id="toggleSidebarIcon" data-lucide="chevron-right" class="w-4 h-4"></i>
+      </button>
+
+      <!-- 邊欄內部內容容器 -->
+      <div class="p-4 h-full overflow-y-auto flex flex-col gap-3 w-64">
+        <div class="border-b border-slate-200 pb-2">
+          <h2 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+            <i data-lucide="grip-vertical" class="w-4 h-4 text-blue-600"></i> 照片快速排序邊欄
+          </h2>
+          <p class="text-[11px] text-slate-400 mt-1">可輸入號碼跳轉，或拖曳小圖排序</p>
+        </div>
+
+        <div id="thumbListContainer" class="flex flex-col gap-2.5 min-h-[100px]">
+          <!-- JS 動態產生照片縮圖排序卡片 -->
+        </div>
+      </div>
+    </aside>
   </div>
 
   <script>
@@ -243,11 +255,15 @@
     const headerTextInput = document.getElementById('headerTextInput');
     const autoDetectCut = document.getElementById('autoDetectCut');
     const pagesContainer = document.getElementById('pagesContainer');
+    const thumbListContainer = document.getElementById('thumbListContainer');
 
-    // 批次輸入控制項
     const batchTimeInput = document.getElementById('batchTimeInput');
     const batchLocationInput = document.getElementById('batchLocationInput');
     const applyBatchBtn = document.getElementById('applyBatchBtn');
+    const rightSidebar = document.getElementById('rightSidebar');
+    const toggleRightSidebar = document.getElementById('toggleRightSidebar');
+    const toggleSidebarIcon = document.getElementById('toggleSidebarIcon');
+    let isSidebarOpen = true;
 
     lucide.createIcons();
 
@@ -263,7 +279,6 @@
       render();
     });
 
-    // 點擊「套用至所有照片」按鈕邏輯
     applyBatchBtn.addEventListener('click', () => {
       const timeVal = batchTimeInput.value.trim();
       const locationVal = batchLocationInput.value.trim();
@@ -283,6 +298,48 @@
 
     [gridLayoutSelect, pagePaddingInput, imageGapInput, headerTextInput].forEach(el => {
       el.addEventListener('input', render);
+    });
+    //右側
+    toggleRightSidebar.addEventListener('click', () => {
+      isSidebarOpen = !isSidebarOpen;
+      
+      if (isSidebarOpen) {
+        // 展開邊欄
+        rightSidebar.classList.remove('w-0');
+        rightSidebar.classList.add('w-64');
+        toggleSidebarIcon.setAttribute('data-lucide', 'chevron-right');
+      } else {
+        // 收合隱藏邊欄
+        rightSidebar.classList.remove('w-64');
+        rightSidebar.classList.add('w-0');
+        toggleSidebarIcon.setAttribute('data-lucide', 'chevron-left');
+      }
+      
+      // 重新渲染 Lucide 圖示 (切換箭頭方向)
+      lucide.createIcons();
+    });
+    // 💡 全域拖曳自動捲動：滑鼠靠近右邊欄上下邊界時自動加速滑動捲軸
+    window.addEventListener('dragover', (e) => {
+      if (draggedIndex === null) return;
+      
+      const sidebar = thumbListContainer.parentElement;
+      if (!sidebar) return;
+
+      const rect = sidebar.getBoundingClientRect();
+      const mouseY = e.clientY;
+
+      if (e.clientX >= rect.left && e.clientX <= rect.right) {
+        const topThreshold = rect.top + 80;
+        const bottomThreshold = rect.bottom - 80;
+
+        if (mouseY < topThreshold) {
+          const intensity = Math.max(1, (topThreshold - mouseY) / 10);
+          sidebar.scrollTop -= 8 * intensity;
+        } else if (mouseY > bottomThreshold) {
+          const intensity = Math.max(1, (mouseY - bottomThreshold) / 10);
+          sidebar.scrollTop += 8 * intensity;
+        }
+      }
     });
 
     function getImageDimensions(url) {
@@ -417,6 +474,111 @@
       return { rows, cols, itemsPerPage: rows * cols, rawValue: val };
     }
 
+    function renderThumbSidebar() {
+      thumbListContainer.innerHTML = '';
+
+      if (imageList.length === 0) {
+        thumbListContainer.innerHTML = `
+          <div class="text-center text-xs text-slate-400 py-8 font-kai">
+            無照片
+          </div>
+        `;
+        return;
+      }
+
+      imageList.forEach((imgObj, idx) => {
+        const item = document.createElement('div');
+        item.className = 'draggable-card flex items-center gap-1.5 p-1.5 border border-slate-200 rounded-lg bg-slate-50 hover:bg-blue-50/50 relative group transition-all shadow-sm';
+        item.draggable = true;
+        item.dataset.index = idx;
+
+        item.innerHTML = `
+          <div class="cursor-grab text-slate-400 hover:text-slate-600 shrink-0">
+            <i data-lucide="grip-vertical" class="w-3.5 h-3.5"></i>
+          </div>
+          <div class="w-10 h-10 bg-white border border-slate-300 rounded overflow-hidden flex items-center justify-center shrink-0">
+            <img src="${imgObj.url}" class="w-full h-full object-cover">
+          </div>
+          <div class="flex-1 min-w-0 flex items-center gap-1 font-kai">
+            <span class="text-xs font-bold text-slate-500 shrink-0">第</span>
+            <input type="number" value="${idx + 1}" min="1" max="${imageList.length}" 
+              class="w-10 border border-slate-300 rounded px-1 py-0.5 text-center text-xs font-bold text-blue-600 bg-white focus:ring-1 focus:ring-blue-500 outline-none shrink-0" 
+              data-move-input="${idx}">
+            <span class="text-xs font-bold text-slate-500 shrink-0">張</span>
+          </div>
+          <div class="flex items-center gap-0.5 shrink-0">
+            <button title="移至第一張" class="text-slate-400 hover:text-blue-600 p-1 transition" data-top="${idx}">
+              <i data-lucide="arrow-up-to-line" class="w-3.5 h-3.5"></i>
+            </button>
+            <button title="刪除照片" class="text-slate-300 hover:text-red-500 p-1 opacity-0 group-hover:opacity-100 transition" data-del="${idx}">
+              <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        `;
+
+        // 直接輸入數字變更位置
+        const moveInput = item.querySelector('[data-move-input]');
+        moveInput.addEventListener('change', (e) => {
+          let newPos = parseInt(e.target.value, 10) - 1;
+          if (isNaN(newPos)) return;
+          if (newPos < 0) newPos = 0;
+          if (newPos >= imageList.length) newPos = imageList.length - 1;
+
+          if (newPos !== idx) {
+            const [moved] = imageList.splice(idx, 1);
+            imageList.splice(newPos, 0, moved);
+            render();
+          }
+        });
+
+        item.querySelector('[data-del]').onclick = (e) => {
+          e.stopPropagation();
+          imageList.splice(idx, 1);
+          render();
+        };
+
+        item.querySelector('[data-top]').onclick = (e) => {
+          e.stopPropagation();
+          const [moved] = imageList.splice(idx, 1);
+          imageList.unshift(moved);
+          render();
+        };
+
+        item.addEventListener('dragstart', () => {
+          draggedIndex = idx;
+          item.classList.add('dragging');
+        });
+
+        item.addEventListener('dragend', () => {
+          draggedIndex = null;
+          item.classList.remove('dragging');
+          document.querySelectorAll('.draggable-card').forEach(c => c.classList.remove('drag-over'));
+        });
+
+        item.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          item.classList.add('drag-over');
+        });
+
+        item.addEventListener('dragleave', () => {
+          item.classList.remove('drag-over');
+        });
+
+        item.addEventListener('drop', (e) => {
+          e.preventDefault();
+          item.classList.remove('drag-over');
+          if (draggedIndex !== null && draggedIndex !== idx) {
+            const movedItem = imageList[draggedIndex];
+            imageList.splice(draggedIndex, 1);
+            imageList.splice(idx, 0, movedItem);
+            render();
+          }
+        });
+
+        thumbListContainer.appendChild(item);
+      });
+    }
+
     function render() {
       imageCount.textContent = imageList.length;
       clearAllBtn.classList.toggle('hidden', imageList.length === 0);
@@ -436,6 +598,7 @@
             <p class="text-xs text-slate-400">請從左側點擊上傳 LINE 長截圖或批次照片</p>
           </div>
         `;
+        renderThumbSidebar();
         lucide.createIcons();
         return;
       }
@@ -449,6 +612,7 @@
 
         const headerEl = document.createElement('div');
         headerEl.className = 'w-full text-center font-bold text-2xl text-slate-900 pb-1 border-b-2 border-slate-900 shrink-0 font-kai';
+        headerEl.style.marginTop = '10mm';
         headerEl.textContent = headerText;
 
         const gridEl = document.createElement('div');
@@ -520,6 +684,7 @@
           });
 
           card.addEventListener('dragend', () => {
+            draggedIndex = null;
             card.classList.remove('dragging');
             document.querySelectorAll('.draggable-card').forEach(c => c.classList.remove('drag-over'));
           });
@@ -561,6 +726,7 @@
         pagesContainer.appendChild(pageEl);
       }
 
+      renderThumbSidebar();
       lucide.createIcons();
     }
 
@@ -569,7 +735,7 @@
       window.print();
     });
 
-    // 匯出 Word：精確鎖定單邊尺寸並補齊雙邊寬高，確保 XML 語法 100% 正確
+    // 匯出 Word (修復括號錯誤與層級嵌套)
     document.getElementById('exportWordBtn').addEventListener('click', async () => {
       if (imageList.length === 0) return alert('請先上傳圖片！');
 
@@ -593,15 +759,14 @@
         const pagePaddingMm = Number(pagePaddingInput.value) || 5;
         const pageMarginDxa = Math.round(pagePaddingMm * 56.7);
 
-        // 精確尺寸 DXA
         let colWidthDxa, cardHeightDxa;
 
         if (rawValue === '1x2') {
-          colWidthDxa = 5585;  // 9.85 cm
-          cardHeightDxa = 14232; // 25.1 cm
+          colWidthDxa = 5585; 
+          cardHeightDxa = 14232;
         } else if (rawValue === '2x1') {
-          colWidthDxa = 11340; // 20.0 cm
-          cardHeightDxa = 7116;  // 12.55 cm
+          colWidthDxa = 11340;
+          cardHeightDxa = 7116;
         } else {
           const gapMm = Number(imageGapInput.value) || 3;
           const gapDxa = Math.round(gapMm * 56.7);
@@ -627,10 +792,9 @@
         };
         const zeroMargins = { top: 0, bottom: 0, left: 0, right: 0 };
 
-        // 目標單位 Pt 轉換 (1 cm ≈ 28.3465 pt)
-        const PT_9_7_CM = 12.8 * 28.3465; // 274.96 pt (1x2 照片精確寬度)
-        const PT_9_8_CM = 13.5 * 28.3465; // 277.80 pt (2x1 照片精確高度)
-        const PT_10_16_CM = 13.5 * 28.3465; // 288.00 pt (2x2 照片精確高度)
+        const PT_9_7_CM = 12.8 * 28.3465;
+        const PT_9_8_CM = 13.5 * 28.3465;
+        const PT_10_16_CM = 13.5 * 28.3465;
 
         const docSections = [];
 
@@ -662,15 +826,12 @@
               let targetWidthPt, targetHeightPt;
 
               if (rawValue === '1x2') {
-                // 1x2：寬度精確為 9.7 cm，高度等比例算出來傳給 docx.js
                 targetWidthPt = PT_9_7_CM;
                 targetHeightPt = (origH / origW) * targetWidthPt;
               } else if (rawValue === '2x1') {
-                // 2x1：高度精確為 9.8 cm，寬度等比例算出來傳給 docx.js
                 targetHeightPt = PT_9_8_CM;
                 targetWidthPt = (origW / origH) * targetHeightPt;
               } else if (rawValue === '2x2') {
-                // 2x2：高度精確為 10.16 cm，寬度等比例算出來傳給 docx.js
                 targetHeightPt = PT_10_16_CM;
                 targetWidthPt = (origW / origH) * targetHeightPt;
               } else {
@@ -684,7 +845,6 @@
                 margins: zeroMargins,
                 verticalAlign: vAlignBottom,
                 children: [
-                  // 上半部照片區
                   new docxLib.Table({
                     width: { size: colWidthDxa, type: docxLib.WidthType.DXA },
                     borders: noBorders,
@@ -716,7 +876,6 @@
                       })
                     ]
                   }),
-                  // 下半部文字資訊區
                   new docxLib.Table({
                     width: { size: colWidthDxa, type: docxLib.WidthType.DXA },
                     borders: noBorders,
@@ -799,7 +958,7 @@
           docSections.push({
             properties: {
               page: {
-                margin: { top: pageMarginDxa, bottom: pageMarginDxa, left: pageMarginDxa, right: pageMarginDxa ,header: 567 }
+                margin: { top: pageMarginDxa, bottom: pageMarginDxa, left: pageMarginDxa, right: pageMarginDxa, header: 567 }
               }
             },
             headers: {

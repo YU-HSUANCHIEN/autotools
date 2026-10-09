@@ -167,13 +167,18 @@
 
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-medium text-slate-700 mb-1">頁邊距 (mm)</label>
-              <input type="number" id="pagePadding" value="5" min="0" max="40" class="w-full border border-slate-300 rounded-lg p-2 text-sm bg-white">
+              <label class="block text-xs font-medium text-slate-700 mb-1">上下頁邊距 (mm)</label>
+              <input type="number" id="pagePaddingTb" value="10" min="0" max="40" class="w-full border border-slate-300 rounded-lg p-2 text-sm bg-white">
             </div>
             <div>
-              <label class="block text-xs font-medium text-slate-700 mb-1">圖片間距 (mm)</label>
-              <input type="number" id="imageGap" value="3" min="0" max="30" class="w-full border border-slate-300 rounded-lg p-2 text-sm bg-white">
+              <label class="block text-xs font-medium text-slate-700 mb-1">左右頁邊距 (mm)</label>
+              <input type="number" id="pagePaddingLr" value="15" min="0" max="40" class="w-full border border-slate-300 rounded-lg p-2 text-sm bg-white">
             </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">圖片間距 (mm)</label>
+            <input type="number" id="imageGap" value="0.5" min="0" max="30" class="w-full border border-slate-300 rounded-lg p-2 text-sm bg-white">
           </div>
         </div>
       </details>
@@ -250,19 +255,20 @@
     const imageCount = document.getElementById('imageCount');
     const clearAllBtn = document.getElementById('clearAllBtn');
     const gridLayoutSelect = document.getElementById('gridLayout');
-    const pagePaddingInput = document.getElementById('pagePadding');
+    const pagePaddingTbInput = document.getElementById('pagePaddingTb');
+    const pagePaddingLrInput = document.getElementById('pagePaddingLr');
     const imageGapInput = document.getElementById('imageGap');
     const headerTextInput = document.getElementById('headerTextInput');
     const autoDetectCut = document.getElementById('autoDetectCut');
     const pagesContainer = document.getElementById('pagesContainer');
     const thumbListContainer = document.getElementById('thumbListContainer');
-
     const batchTimeInput = document.getElementById('batchTimeInput');
     const batchLocationInput = document.getElementById('batchLocationInput');
     const applyBatchBtn = document.getElementById('applyBatchBtn');
     const rightSidebar = document.getElementById('rightSidebar');
     const toggleRightSidebar = document.getElementById('toggleRightSidebar');
     const toggleSidebarIcon = document.getElementById('toggleSidebarIcon');
+
     let isSidebarOpen = true;
 
     lucide.createIcons();
@@ -277,6 +283,8 @@
     clearAllBtn.addEventListener('click', () => {
       imageList = [];
       render();
+      batchTimeInput.value="";
+      batchLocationInput.value="";
     });
 
     applyBatchBtn.addEventListener('click', () => {
@@ -296,29 +304,28 @@
       render();
     });
 
-    [gridLayoutSelect, pagePaddingInput, imageGapInput, headerTextInput].forEach(el => {
+    [gridLayoutSelect, pagePaddingTbInput, pagePaddingLrInput, imageGapInput, headerTextInput].forEach(el => {
       el.addEventListener('input', render);
     });
-    //右側
+
+    //右側邊欄開關
     toggleRightSidebar.addEventListener('click', () => {
       isSidebarOpen = !isSidebarOpen;
       
       if (isSidebarOpen) {
-        // 展開邊欄
         rightSidebar.classList.remove('w-0');
         rightSidebar.classList.add('w-64');
         toggleSidebarIcon.setAttribute('data-lucide', 'chevron-right');
       } else {
-        // 收合隱藏邊欄
         rightSidebar.classList.remove('w-64');
         rightSidebar.classList.add('w-0');
         toggleSidebarIcon.setAttribute('data-lucide', 'chevron-left');
       }
       
-      // 重新渲染 Lucide 圖示 (切換箭頭方向)
       lucide.createIcons();
     });
-    // 💡 全域拖曳自動捲動：滑鼠靠近右邊欄上下邊界時自動加速滑動捲軸
+
+    // 全域拖曳自動捲動
     window.addEventListener('dragover', (e) => {
       if (draggedIndex === null) return;
       
@@ -516,7 +523,6 @@
           </div>
         `;
 
-        // 直接輸入數字變更位置
         const moveInput = item.querySelector('[data-move-input]');
         moveInput.addEventListener('change', (e) => {
           let newPos = parseInt(e.target.value, 10) - 1;
@@ -584,8 +590,9 @@
       clearAllBtn.classList.toggle('hidden', imageList.length === 0);
 
       const { rows, cols, itemsPerPage } = getGridConfig();
-      const padding = pagePaddingInput.value || 5;
-      const gap = imageGapInput.value || 3;
+      const paddingTb = pagePaddingTbInput.value !== '' ? pagePaddingTbInput.value : 10;
+      const paddingLr = pagePaddingLrInput.value !== '' ? pagePaddingLrInput.value : 15;
+      const gap = imageGapInput.value !== '' ? imageGapInput.value : 3;
       const headerText = headerTextInput.value.trim() || '照片黏貼';
 
       pagesContainer.innerHTML = '';
@@ -607,12 +614,14 @@
 
       for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
         const pageEl = document.createElement('div');
-        pageEl.className = 'a4-page portrait p-2 flex flex-col justify-between font-kai';
-        pageEl.style.padding = `${padding}mm`;
+        pageEl.className = 'a4-page portrait flex flex-col justify-between font-kai';
+        pageEl.style.paddingTop = `${paddingTb}mm`;
+        pageEl.style.paddingBottom = `${paddingTb}mm`;
+        pageEl.style.paddingLeft = `${paddingLr}mm`;
+        pageEl.style.paddingRight = `${paddingLr}mm`;
 
         const headerEl = document.createElement('div');
         headerEl.className = 'w-full text-center font-bold text-2xl text-slate-900 pb-1 border-b-2 border-slate-900 shrink-0 font-kai';
-        headerEl.style.marginTop = '10mm';
         headerEl.textContent = headerText;
 
         const gridEl = document.createElement('div');
@@ -645,7 +654,7 @@
           const infoBox = document.createElement('div');
           infoBox.className = 'w-full text-16pt font-kai space-y-1 p-1.5 text-left shrink-0 bg-white';
           infoBox.innerHTML = `
-            <div class="flex items-center border-b border-slate-300 pb-0.5">
+            <div class="flex items-center justify-center border-b border-slate-300 pb-0.5">
               <span class="text-slate-900 font-bold shrink-0 font-kai">編號 ${photoNum}</span>
             </div>
             <div class="flex items-center border-b border-slate-300 pb-0.5">
@@ -735,7 +744,7 @@
       window.print();
     });
 
-    // 匯出 Word (修復括號錯誤與層級嵌套)
+    // 匯出 Word
     document.getElementById('exportWordBtn').addEventListener('click', async () => {
       if (imageList.length === 0) return alert('請先上傳圖片！');
 
@@ -756,23 +765,28 @@
         const headerText = headerTextInput.value.trim() || '照片黏貼';
         const totalPages = Math.ceil(imageList.length / itemsPerPage);
 
-        const pagePaddingMm = Number(pagePaddingInput.value) || 5;
-        const pageMarginDxa = Math.round(pagePaddingMm * 56.7);
+        const pagePaddingTbMm = Number(pagePaddingTbInput.value) || 10;
+        const pagePaddingLrMm = Number(pagePaddingLrInput.value) || 15;
+        
+        const topBottomMarginDxa = Math.round(pagePaddingTbMm * 56.7);
+        const leftRightMarginDxa = Math.round(pagePaddingLrMm * 56.7);
+
+        const availableWidthDxa = 11906 - (leftRightMarginDxa * 2); 
 
         let colWidthDxa, cardHeightDxa;
 
         if (rawValue === '1x2') {
-          colWidthDxa = 5585; 
+          colWidthDxa = Math.floor(availableWidthDxa / 2);
           cardHeightDxa = 14232;
         } else if (rawValue === '2x1') {
-          colWidthDxa = 11340;
+          colWidthDxa = availableWidthDxa;
           cardHeightDxa = 7116;
         } else {
           const gapMm = Number(imageGapInput.value) || 3;
           const gapDxa = Math.round(gapMm * 56.7);
-          const availableWidthDxa = 11906 - (pageMarginDxa * 2);
           colWidthDxa = Math.floor((availableWidthDxa - ((cols - 1) * gapDxa)) / cols);
-          const availableHeightDxa = 14800 - (pageMarginDxa * 2);
+          
+          const availableHeightDxa = 14800 - (topBottomMarginDxa * 2);
           cardHeightDxa = Math.floor(availableHeightDxa / rows);
         }
 
@@ -792,9 +806,9 @@
         };
         const zeroMargins = { top: 0, bottom: 0, left: 0, right: 0 };
 
-        const PT_9_7_CM = 12.8 * 28.3465;
-        const PT_9_8_CM = 13.5 * 28.3465;
-        const PT_10_16_CM = 13.5 * 28.3465;
+        const PT_9_7_CM = 12 * 28.3465;
+        const PT_9_8_CM = 12.8 * 28.3465;
+        const PT_10_16_CM = 12.8 * 28.3465;
 
         const docSections = [];
 
@@ -832,13 +846,18 @@
                 targetHeightPt = PT_9_8_CM;
                 targetWidthPt = (origW / origH) * targetHeightPt;
               } else if (rawValue === '2x2') {
-                targetHeightPt = PT_10_16_CM;
+                const maxCellWidthPt = (colWidthDxa / 15); 
+                const maxCellHeightPt = PT_10_16_CM;
+                targetHeightPt = maxCellHeightPt;
                 targetWidthPt = (origW / origH) * targetHeightPt;
+                if (targetWidthPt > maxCellWidthPt) {
+                  targetWidthPt = maxCellWidthPt;
+                  targetHeightPt = (origH / origW) * targetWidthPt;
+                }
               } else {
                 targetWidthPt = (colWidthDxa / 20) - 10;
                 targetHeightPt = (origH / origW) * targetWidthPt;
               }
-
               rowCells.push(new docxLib.TableCell({
                 borders: { top: borderSolid, bottom: borderSolid, left: borderSolid, right: borderSolid },
                 width: { size: colWidthDxa, type: docxLib.WidthType.DXA },
@@ -885,10 +904,10 @@
                           borders: { top: borderSolid, bottom: borderLight },
                           margins: { top: 20, bottom: 20, left: 80, right: 80 },
                           children: [new docxLib.Paragraph({
-                            alignment: alignLeft,
+                            alignment: alignCenter,
                             spacing: { before: 0, after: 0 },
                             children: [
-                              new docxLib.TextRun({ text: `編號 ${globalIdx + 1}`, size: 26, font: FONT_KAI })
+                              new docxLib.TextRun({ text: `編號 ${globalIdx + 1}`,bold: true, size: 28, font: FONT_KAI })
                             ]
                           })]
                         })]
@@ -901,8 +920,8 @@
                             alignment: alignLeft,
                             spacing: { before: 0, after: 0 },
                             children: [
-                              new docxLib.TextRun({ text: "時間：", bold: true, size: 26, font: FONT_KAI }),
-                              new docxLib.TextRun({ text: imgObj.time || "", size: 26, font: FONT_KAI })
+                              new docxLib.TextRun({ text: "時間：", bold: true, size: 28, font: FONT_KAI }),
+                              new docxLib.TextRun({ text: imgObj.time || "", size: 28, font: FONT_KAI })
                             ]
                           })]
                         })]
@@ -915,8 +934,8 @@
                             alignment: alignLeft,
                             spacing: { before: 0, after: 0 },
                             children: [
-                              new docxLib.TextRun({ text: "地點：", bold: true, size: 26, font: FONT_KAI }),
-                              new docxLib.TextRun({ text: imgObj.location || "", size: 26, font: FONT_KAI })
+                              new docxLib.TextRun({ text: "地點：", bold: true, size: 28, font: FONT_KAI }),
+                              new docxLib.TextRun({ text: imgObj.location || "", size: 28, font: FONT_KAI })
                             ]
                           })]
                         })]
@@ -929,8 +948,8 @@
                             alignment: alignLeft,
                             spacing: { before: 0, after: 0 },
                             children: [
-                              new docxLib.TextRun({ text: "說明：", bold: true, size: 26, font: FONT_KAI }),
-                              new docxLib.TextRun({ text: imgObj.note || "", size: 26, font: FONT_KAI })
+                              new docxLib.TextRun({ text: "說明：", bold: true, size: 28, font: FONT_KAI }),
+                              new docxLib.TextRun({ text: imgObj.note || "", size: 28, font: FONT_KAI })
                             ]
                           })]
                         })]
@@ -954,11 +973,11 @@
             width: { size: colWidthDxa * cols, type: docxLib.WidthType.DXA },
             alignment: alignCenter
           });
-
+          
           docSections.push({
             properties: {
               page: {
-                margin: { top: pageMarginDxa, bottom: pageMarginDxa, left: pageMarginDxa, right: pageMarginDxa, header: 567 }
+                margin: { top: topBottomMarginDxa, bottom: topBottomMarginDxa, left: leftRightMarginDxa, right: leftRightMarginDxa, header: 567 }
               }
             },
             headers: {
@@ -967,7 +986,7 @@
                   new docxLib.Paragraph({
                     alignment: alignCenter,
                     children: [
-                      new docxLib.TextRun({ text: headerText, bold: true, size: 40, font: FONT_KAI }),
+                      new docxLib.TextRun({ text: headerText, bold: true, size: 48, font: FONT_KAI }),
                     ],
                     spacing: { before: 0, after: 30 }
                   }),

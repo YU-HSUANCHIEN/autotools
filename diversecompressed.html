@@ -10,6 +10,9 @@
     </script>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     
+    <!-- 引入 HEIC 轉碼函式庫 (heic2any) -->
+    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+
     <!-- 引入穩定版 FFmpeg (v0.11.6) -->
     <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
     
@@ -77,7 +80,7 @@
     <!-- 標籤切換按鈕 -->
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('pdf')">📄 PDF 批次壓縮</button>
-        <button class="tab-btn" onclick="switchTab('image')">🖼️ 圖片批次壓縮</button>
+        <button class="tab-btn" onclick="switchTab('image')">🖼️ 圖片批次壓縮 (支援 HEIC)</button>
         <button class="tab-btn" onclick="switchTab('video')">🎬 影片批次壓縮</button>
     </div>
 
@@ -107,7 +110,7 @@
 
     <!-- ==================== 圖片壓縮面板 ==================== -->
     <div id="panel-image" class="panel">
-        <h3>圖片批次極致壓縮 (支援 JPG, PNG, WebP, BMP 等)</h3>
+        <h3>圖片批次極致壓縮 (支援 JPG, PNG, WebP, HEIC 等)</h3>
         <div class="box" id="dropZoneImg" onclick="document.getElementById('fileImg').click()">
             <p>📁 <b>將多張圖片拖曳至此</b> 或點擊選擇</p>
             <input type="file" id="fileImg" accept="image/*,.heic" multiple style="display:none">
@@ -166,7 +169,9 @@
             const fileInput = document.getElementById(fileInputId);
 
             fileInput.addEventListener('change', (e) => {
-                if (e.target.files.length > 0) callback(Array.from(e.target.files));
+                if (e.target.files.length > 0) {
+                    callback(Array.from(e.target.files));
+                }
             });
 
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -176,7 +181,10 @@
             ['dragleave', 'drop'].forEach(eventName => dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover')));
 
             dropZone.addEventListener('drop', (e) => {
-                if (e.dataTransfer.files.length > 0) callback(Array.from(e.dataTransfer.files));
+                if (e.dataTransfer.files.length > 0) {
+                    fileInput.files = e.dataTransfer.files;
+                    callback(Array.from(e.dataTransfer.files));
+                }
             });
         }
 
@@ -184,23 +192,41 @@
 
         setupDropZone('dropZonePdf', 'filePdf', (list) => {
             filesPdf = list.filter(f => f.type === 'application/pdf');
-            document.getElementById('infoPdf').innerText = `已選擇 ${filesPdf.length} 個檔案：` + filesPdf.map(f => f.name).join(', ');
-            document.getElementById('btnPdf').disabled = filesPdf.length === 0;
+            const info = document.getElementById('infoPdf');
+            if (filesPdf.length > 0) {
+                info.innerText = `已選擇 ${filesPdf.length} 個檔案：` + filesPdf.map(f => f.name).join(', ');
+                document.getElementById('btnPdf').disabled = false;
+            } else {
+                info.innerText = '尚未選擇檔案';
+                document.getElementById('btnPdf').disabled = true;
+            }
         });
 
         setupDropZone('dropZoneImg', 'fileImg', (list) => {
             filesImg = list.filter(f => f.type.startsWith('image/') || f.name.match(/\.(jpg|jpeg|png|webp|bmp|heic)$/i));
-            document.getElementById('infoImg').innerText = `已選擇 ${filesImg.length} 個檔案：` + filesImg.map(f => f.name).join(', ');
-            document.getElementById('btnImg').disabled = filesImg.length === 0;
+            const info = document.getElementById('infoImg');
+            if (filesImg.length > 0) {
+                info.innerText = `已選擇 ${filesImg.length} 個檔案：` + filesImg.map(f => f.name).join(', ');
+                document.getElementById('btnImg').disabled = false;
+            } else {
+                info.innerText = '尚未選擇檔案';
+                document.getElementById('btnImg').disabled = true;
+            }
         });
 
         setupDropZone('dropZoneVid', 'fileVid', (list) => {
             filesVid = list.filter(f => f.type.startsWith('video/') || f.name.match(/\.(mp4|mov|avi|mkv|webm|flv|wmv|m4v)$/i));
-            document.getElementById('infoImg').innerText = `已選擇 ${filesVid.length} 個檔案：` + filesVid.map(f => f.name).join(', ');
-            document.getElementById('btnVid').disabled = filesVid.length === 0;
+            const info = document.getElementById('infoVid');
+            if (filesVid.length > 0) {
+                info.innerText = `已選擇 ${filesVid.length} 個檔案：` + filesVid.map(f => f.name).join(', ');
+                document.getElementById('btnVid').disabled = false;
+            } else {
+                info.innerText = '尚未選擇檔案';
+                document.getElementById('btnVid').disabled = true;
+            }
         });
 
-        // 1. PDF 批次壓縮 (含進度條與 ETA)
+        // 1. PDF 批次壓縮
         async function compressPDFs() {
             if (filesPdf.length === 0) return;
             const status = document.getElementById('statusPdf');
@@ -259,14 +285,13 @@
             status.innerText = '所有 PDF 批次壓縮完成！';
             timeEstimate.innerText = '✅ 全部處理完畢！';
             
-            // 清空檔案選擇
             filesPdf = [];
             document.getElementById('infoPdf').innerText = '尚未選擇檔案';
             document.getElementById('filePdf').value = '';
-            document.getElementById('btnPdf').disabled = false;
+            document.getElementById('btnPdf').disabled = true;
         }
 
-        // 2. 圖片批次壓縮 (含進度條、ETA 與 HEIC 防呆攔截)
+        // 2. 圖片批次壓縮 (支援 HEIC 自動解碼轉換)
         async function compressImages() {
             if (filesImg.length === 0) return;
             const status = document.getElementById('statusImg');
@@ -280,14 +305,7 @@
             let startTime = Date.now();
 
             for (let idx = 0; idx < filesImg.length; idx++) {
-                const fileImg = filesImg[idx];
-                
-                // 檢查是否為 HEIC 格式（瀏覽器原生不支援解碼，直接跳過避免卡死）
-                if (fileImg.name.toLowerCase().endsWith('.heic') || fileImg.type === 'image/heic') {
-                    status.innerText = `⚠️ 跳過不支援的 HEIC 格式：${fileImg.name}`;
-                    continue;
-                }
-
+                let fileImg = filesImg[idx];
                 status.innerText = `正在處理第 ${idx + 1}/${filesImg.length} 張圖片：${fileImg.name}`;
                 
                 let ratio = idx / filesImg.length;
@@ -304,31 +322,48 @@
                     timeEstimate.innerText = `⏳ 預估剩餘時間：${mins > 0 ? mins + '分 ' : ''}${secs}秒`;
                 }
 
-                await new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.readAsDataURL(fileImg);
-                    reader.onload = (event) => {
-                        const img = new Image();
-                        img.src = event.target.result;
-                        img.onload = () => {
-                            const canvas = document.createElement('canvas');
-                            canvas.width = img.width; canvas.height = img.height;
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0);
+                try {
+                    // 如果是 HEIC 格式，先透過 heic2any 轉為標準 blob
+                    if (fileImg.name.toLowerCase().endsWith('.heic') || fileImg.type === 'image/heic') {
+                        status.innerText = `正在解碼 HEIC 圖片：${fileImg.name}`;
+                        const convertedBlob = await heic2any({
+                            blob: fileImg,
+                            toType: "image/jpeg",
+                            quality: 0.8
+                        });
+                        // heic2any 可能回傳陣列，取第一個
+                        fileImg = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+                    }
 
-                            canvas.toBlob((blob) => {
-                                if (blob) {
-                                    downloadFile(blob, fileImg.name.replace(/\.[^/.]+$/, "") + '_compressed.jpg');
-                                }
+                    await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.readAsDataURL(fileImg);
+                        reader.onload = (event) => {
+                            const img = new Image();
+                            img.src = event.target.result;
+                            img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                canvas.width = img.width; canvas.height = img.height;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0);
+
+                                canvas.toBlob((blob) => {
+                                    if (blob) {
+                                        downloadFile(blob, filesImg[idx].name.replace(/\.[^/.]+$/, "") + '_compressed.jpg');
+                                    }
+                                    resolve();
+                                }, 'image/jpeg', quality);
+                            };
+                            img.onerror = () => {
+                                console.error('圖片載入失敗: ' + filesImg[idx].name);
                                 resolve();
-                            }, 'image/jpeg', quality);
+                            };
                         };
-                        img.onerror = () => {
-                            console.error('圖片載入失敗: ' + fileImg.name);
-                            resolve(); // 發生錯誤也不卡死，繼續下一張
-                        };
-                    };
-                });
+                    });
+                } catch (err) {
+                    console.error('HEIC 轉碼失敗：', err);
+                    status.innerText = `⚠️ 圖片 ${fileImg.name} 轉碼失敗，已跳過`;
+                }
             }
 
             progressBar.style.width = '100%';
@@ -336,14 +371,13 @@
             status.innerText = '所有圖片批次壓縮完成！';
             timeEstimate.innerText = '✅ 全部處理完畢！';
 
-            // 清空檔案選擇
             filesImg = [];
             document.getElementById('infoImg').innerText = '尚未選擇檔案';
             document.getElementById('fileImg').value = '';
-            document.getElementById('btnImg').disabled = false;
+            document.getElementById('btnImg').disabled = true;
         }
 
-        // 3. 影片批次壓縮 (含進度條、ETA 與自動清空)
+        // 3. 影片批次壓縮
         let ffmpegInstance = null;
         async function compressVideosFFmpeg() {
             if (filesVid.length === 0) return;
@@ -425,17 +459,19 @@
                 progressBar.innerText = '100%';
                 timeEstimate.innerText = '✅ 全部處理完畢！';
 
-                // 清空檔案選擇
                 filesVid = [];
                 document.getElementById('infoVid').innerText = '尚未選擇檔案';
                 document.getElementById('fileVid').value = '';
+                document.getElementById('btnVid').disabled = true;
 
             } catch (e) {
                 console.error(e);
                 status.innerText = '影片壓縮發生錯誤，請檢查主控台 (F12)。';
                 timeEstimate.innerText = '';
             } finally {
-                document.getElementById('btnVid').disabled = false;
+                if (filesVid.length > 0) {
+                    document.getElementById('btnVid').disabled = false;
+                }
             }
         }
 

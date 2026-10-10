@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>全能批次極致壓縮工具箱 (Vercel 極速版)</title>
+    <title>全能批次極致壓縮工具箱</title>
     <!-- PDF 處理函式庫 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
@@ -39,7 +39,7 @@
         .status { margin-top: 15px; font-weight: bold; color: #007bff; }
         select { padding: 5px; border-radius: 4px; border: 1px solid #ccc; }
 
-        /* 進度條與預估時間樣式 */
+        /* 通用進度條與預估時間樣式 */
         .progress-container {
             width: 100%;
             background-color: #e9ecef;
@@ -78,7 +78,7 @@
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('pdf')">📄 PDF 批次壓縮</button>
         <button class="tab-btn" onclick="switchTab('image')">🖼️ 圖片批次壓縮</button>
-        <button class="tab-btn" onclick="switchTab('video')">🎬 影片批次壓縮 (極速模式)</button>
+        <button class="tab-btn" onclick="switchTab('video')">🎬 影片批次壓縮</button>
     </div>
 
     <!-- ==================== PDF 壓縮面板 ==================== -->
@@ -97,6 +97,11 @@
             </select>
         </p>
         <button class="action-btn" id="btnPdf" onclick="compressPDFs()" disabled>開始批次壓縮 PDF</button>
+        
+        <div class="progress-container" id="progressContainerPdf">
+            <div class="progress-bar" id="progressBarPdf">0%</div>
+        </div>
+        <div class="time-estimate" id="timeEstimatePdf"></div>
         <div class="status" id="statusPdf"></div>
     </div>
 
@@ -105,7 +110,7 @@
         <h3>圖片批次極致壓縮 (支援 JPG, PNG, WebP, BMP 等)</h3>
         <div class="box" id="dropZoneImg" onclick="document.getElementById('fileImg').click()">
             <p>📁 <b>將多張圖片拖曳至此</b> 或點擊選擇</p>
-            <input type="file" id="fileImg" accept="image/*" multiple style="display:none">
+            <input type="file" id="fileImg" accept="image/*,.heic" multiple style="display:none">
         </div>
         <div class="file-info" id="infoImg">尚未選擇檔案</div>
         <p>壓縮畫質：
@@ -116,10 +121,15 @@
             </select>
         </p>
         <button class="action-btn" id="btnImg" onclick="compressImages()" disabled>開始批次壓縮圖片</button>
+        
+        <div class="progress-container" id="progressContainerImg">
+            <div class="progress-bar" id="progressBarImg">0%</div>
+        </div>
+        <div class="time-estimate" id="timeEstimateImg"></div>
         <div class="status" id="statusImg"></div>
     </div>
 
-    <!-- ==================== 影片壓縮面板 (極速模式) ==================== -->
+    <!-- ==================== 影片壓縮面板 ==================== -->
     <div id="panel-video" class="panel">
         <h3>影片批次壓縮 (支援多格式，維持原格式輸出)</h3>
         <div class="box" id="dropZoneVid" onclick="document.getElementById('fileVid').click()">
@@ -127,21 +137,19 @@
             <input type="file" id="fileVid" accept="video/*,.mkv,.mov,.avi,.wmv,.flv,.m4v" multiple style="display:none">
         </div>
         <div class="file-info" id="infoVid">尚未選擇檔案</div>
-        <p>壓縮強度 (CRF 畫質參數)：
+        <p>壓縮強度 (預設高壓縮)：
             <select id="qualityVid">
-                <option value="28">高壓縮 (檔案極小)</option>
-                <option value="23" selected>標準 (平衡畫質)</option>
+                <option value="28" selected>高壓縮 (檔案極小，推薦)</option>
+                <option value="23">標準 (平衡畫質)</option>
                 <option value="18">高品質 (檔案較大)</option>
             </select>
         </p>
         <button class="action-btn" id="btnVid" onclick="compressVideosFFmpeg()" disabled>開始批次壓縮影片 (極速模式)</button>
         
-        <!-- 進度條與預估時間介面 -->
         <div class="progress-container" id="progressContainerVid">
             <div class="progress-bar" id="progressBarVid">0%</div>
         </div>
         <div class="time-estimate" id="timeEstimateVid"></div>
-
         <div class="status" id="statusVid">點擊後開始處理</div>
     </div>
 
@@ -188,20 +196,41 @@
 
         setupDropZone('dropZoneVid', 'fileVid', (list) => {
             filesVid = list.filter(f => f.type.startsWith('video/') || f.name.match(/\.(mp4|mov|avi|mkv|webm|flv|wmv|m4v)$/i));
-            document.getElementById('infoVid').innerText = `已選擇 ${filesVid.length} 個檔案：` + filesVid.map(f => f.name).join(', ');
+            document.getElementById('infoImg').innerText = `已選擇 ${filesVid.length} 個檔案：` + filesVid.map(f => f.name).join(', ');
             document.getElementById('btnVid').disabled = filesVid.length === 0;
         });
 
-        // 1. PDF 批次壓縮
+        // 1. PDF 批次壓縮 (含進度條與 ETA)
         async function compressPDFs() {
             if (filesPdf.length === 0) return;
             const status = document.getElementById('statusPdf');
+            const progressContainer = document.getElementById('progressContainerPdf');
+            const progressBar = document.getElementById('progressBarPdf');
+            const timeEstimate = document.getElementById('timeEstimatePdf');
             const quality = parseFloat(document.getElementById('qualityPdf').value);
             document.getElementById('btnPdf').disabled = true;
+            progressContainer.style.display = 'block';
+
+            let startTime = Date.now();
 
             for (let idx = 0; idx < filesPdf.length; idx++) {
                 const filePdf = filesPdf[idx];
                 status.innerText = `正在處理第 ${idx + 1}/${filesPdf.length} 個 PDF：${filePdf.name}`;
+                
+                let ratio = (idx) / filesPdf.length;
+                let percent = Math.round(ratio * 100);
+                progressBar.style.width = percent + '%';
+                progressBar.innerText = percent + '%';
+
+                if (idx > 0) {
+                    let elapsedTime = (Date.now() - startTime) / 1000;
+                    let estimatedTotal = elapsedTime / ratio;
+                    let remaining = Math.round(estimatedTotal - elapsedTime);
+                    let mins = Math.floor(remaining / 60);
+                    let secs = remaining % 60;
+                    timeEstimate.innerText = `⏳ 預估剩餘時間：${mins > 0 ? mins + '分 ' : ''}${secs}秒`;
+                }
+
                 try {
                     const arrayBuffer = await filePdf.arrayBuffer();
                     const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -224,21 +253,57 @@
                     downloadFile(new Blob([pdfBytes], { type: 'application/pdf' }), filePdf.name.replace('.pdf', '_compressed.pdf'));
                 } catch (e) { console.error(e); }
             }
+
+            progressBar.style.width = '100%';
+            progressBar.innerText = '100%';
             status.innerText = '所有 PDF 批次壓縮完成！';
+            timeEstimate.innerText = '✅ 全部處理完畢！';
+            
+            // 清空檔案選擇
+            filesPdf = [];
+            document.getElementById('infoPdf').innerText = '尚未選擇檔案';
+            document.getElementById('filePdf').value = '';
             document.getElementById('btnPdf').disabled = false;
         }
 
-        // 2. 圖片批次壓縮
+        // 2. 圖片批次壓縮 (含進度條、ETA 與 HEIC 防呆攔截)
         async function compressImages() {
             if (filesImg.length === 0) return;
             const status = document.getElementById('statusImg');
+            const progressContainer = document.getElementById('progressContainerImg');
+            const progressBar = document.getElementById('progressBarImg');
+            const timeEstimate = document.getElementById('timeEstimateImg');
             const quality = parseFloat(document.getElementById('qualityImg').value);
             document.getElementById('btnImg').disabled = true;
+            progressContainer.style.display = 'block';
+
+            let startTime = Date.now();
 
             for (let idx = 0; idx < filesImg.length; idx++) {
                 const fileImg = filesImg[idx];
+                
+                // 檢查是否為 HEIC 格式（瀏覽器原生不支援解碼，直接跳過避免卡死）
+                if (fileImg.name.toLowerCase().endsWith('.heic') || fileImg.type === 'image/heic') {
+                    status.innerText = `⚠️ 跳過不支援的 HEIC 格式：${fileImg.name}`;
+                    continue;
+                }
+
                 status.innerText = `正在處理第 ${idx + 1}/${filesImg.length} 張圖片：${fileImg.name}`;
                 
+                let ratio = idx / filesImg.length;
+                let percent = Math.round(ratio * 100);
+                progressBar.style.width = percent + '%';
+                progressBar.innerText = percent + '%';
+
+                if (idx > 0) {
+                    let elapsedTime = (Date.now() - startTime) / 1000;
+                    let estimatedTotal = elapsedTime / (ratio || 0.01);
+                    let remaining = Math.round(estimatedTotal - elapsedTime);
+                    let mins = Math.floor(remaining / 60);
+                    let secs = remaining % 60;
+                    timeEstimate.innerText = `⏳ 預估剩餘時間：${mins > 0 ? mins + '分 ' : ''}${secs}秒`;
+                }
+
                 await new Promise((resolve) => {
                     const reader = new FileReader();
                     reader.readAsDataURL(fileImg);
@@ -252,19 +317,33 @@
                             ctx.drawImage(img, 0, 0);
 
                             canvas.toBlob((blob) => {
-                                downloadFile(blob, fileImg.name.replace(/\.[^/.]+$/, "") + '_compressed.jpg');
+                                if (blob) {
+                                    downloadFile(blob, fileImg.name.replace(/\.[^/.]+$/, "") + '_compressed.jpg');
+                                }
                                 resolve();
                             }, 'image/jpeg', quality);
+                        };
+                        img.onerror = () => {
+                            console.error('圖片載入失敗: ' + fileImg.name);
+                            resolve(); // 發生錯誤也不卡死，繼續下一張
                         };
                     };
                 });
             }
+
+            progressBar.style.width = '100%';
+            progressBar.innerText = '100%';
             status.innerText = '所有圖片批次壓縮完成！';
+            timeEstimate.innerText = '✅ 全部處理完畢！';
+
+            // 清空檔案選擇
+            filesImg = [];
+            document.getElementById('infoImg').innerText = '尚未選擇檔案';
+            document.getElementById('fileImg').value = '';
             document.getElementById('btnImg').disabled = false;
         }
 
-        // 3. 影片批次壓縮 (改用 ultrafast 極速模式)
-        // 3. 影片批次壓縮 (加入嚴格的載入狀態檢查)
+        // 3. 影片批次壓縮 (含進度條、ETA 與自動清空)
         let ffmpegInstance = null;
         async function compressVideosFFmpeg() {
             if (filesVid.length === 0) return;
@@ -283,9 +362,7 @@
                     ffmpegInstance = createFFmpeg({ log: true });
                 }
 
-                // 確保 FFmpeg 已經載入完成
                 if (!ffmpegInstance.isLoaded()) {
-                    status.innerText = '正在下載與載入 FFmpeg 核心元件，首次執行需稍候...';
                     await ffmpegInstance.load();
                 }
 
@@ -325,10 +402,8 @@
                     const inputName = 'input_' + idx + ext;
                     const outputName = 'output_' + idx + ext;
 
-                    // 寫入檔案
                     ffmpegInstance.FS('writeFile', inputName, await FFmpeg.fetchFile(fileVid));
 
-                    // 執行壓縮
                     await ffmpegInstance.run(
                         '-i', inputName,
                         '-vcodec', 'libx264',
@@ -337,12 +412,10 @@
                         outputName
                     );
 
-                    // 讀取並下載
                     const data = ffmpegInstance.FS('readFile', outputName);
                     const blob = new Blob([data.buffer], { type: fileVid.type || 'video/mp4' });
                     downloadFile(blob, fileVid.name.replace(/\.[^/.]+$/, "") + '_compressed' + ext);
 
-                    // 清理暫存檔
                     ffmpegInstance.FS('unlink', inputName);
                     ffmpegInstance.FS('unlink', outputName);
                 }
@@ -351,6 +424,12 @@
                 progressBar.style.width = '100%';
                 progressBar.innerText = '100%';
                 timeEstimate.innerText = '✅ 全部處理完畢！';
+
+                // 清空檔案選擇
+                filesVid = [];
+                document.getElementById('infoVid').innerText = '尚未選擇檔案';
+                document.getElementById('fileVid').value = '';
+
             } catch (e) {
                 console.error(e);
                 status.innerText = '影片壓縮發生錯誤，請檢查主控台 (F12)。';

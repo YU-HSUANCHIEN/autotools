@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>批次極致壓縮工具箱 (GitHub Pages 本地核心版)</title>
+    <title>全能批次極致壓縮工具箱 (Vercel 穩定版)</title>
     <!-- PDF 處理函式庫 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
@@ -10,7 +10,7 @@
     </script>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     
-    <!-- 引入 FFmpeg v0.12 主程式 -->
+    <!-- 引入穩定版 FFmpeg (v0.11.6，不依賴外部 Worker，完美相容 Vercel) -->
     <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
     
     <style>
@@ -42,14 +42,14 @@
 </head>
 <body>
 
-    <h2>🛠️ 批次極致壓縮工具箱</h2>
-    <p style="color: #666; margin-bottom: 25px;">PDF、圖片與影片（保持 MP4 等原格式）批次壓縮，完全在瀏覽器安全運行</p>
+    <h2>🛠️ 全能批次極致壓縮工具箱</h2>
+    <p style="color: #666; margin-bottom: 25px;">PDF、圖片與影片全格式批次壓縮，完全在瀏覽器安全運行</p>
 
     <!-- 標籤切換按鈕 -->
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('pdf')">📄 PDF 批次壓縮</button>
         <button class="tab-btn" onclick="switchTab('image')">🖼️ 圖片批次壓縮</button>
-        <button class="tab-btn" onclick="switchTab('video')">🎬 影片批次壓縮 (原格式)</button>
+        <button class="tab-btn" onclick="switchTab('video')">🎬 影片批次壓縮 (維持同格式)</button>
     </div>
 
     <!-- ==================== PDF 壓縮面板 ==================== -->
@@ -71,9 +71,9 @@
         <div class="status" id="statusPdf"></div>
     </div>
 
-    <!-- ==================== 圖片壓縮面板 ==================== -->
+    <!-- ==================== 圖片壓縮面板 (擴充全格式) ==================== -->
     <div id="panel-image" class="panel">
-        <h3>圖片批次極致壓縮 (JPG, PNG, WebP 等)</h3>
+        <h3>圖片批次極致壓縮 (支援 JPG, PNG, WebP, BMP 等)</h3>
         <div class="box" id="dropZoneImg" onclick="document.getElementById('fileImg').click()">
             <p>📁 <b>將多張圖片拖曳至此</b> 或點擊選擇</p>
             <input type="file" id="fileImg" accept="image/*" multiple style="display:none">
@@ -90,12 +90,12 @@
         <div class="status" id="statusImg"></div>
     </div>
 
-    <!-- ==================== 影片壓縮面板 (調用同目錄下的本機核心) ==================== -->
+    <!-- ==================== 影片壓縮面板 (擴充全格式，維持同格式) ==================== -->
     <div id="panel-video" class="panel">
-        <h3>影片批次壓縮 (保持 MP4 等原格式不變)</h3>
+        <h3>影片批次壓縮 (支援 MP4, MOV, MKV, AVI, WebM 等，維持原格式輸出)</h3>
         <div class="box" id="dropZoneVid" onclick="document.getElementById('fileVid').click()">
             <p>📁 <b>將多支影片拖曳至此</b> 或點擊選擇</p>
-            <input type="file" id="fileVid" accept="video/*" multiple style="display:none">
+            <input type="file" id="fileVid" accept="video/*,.mkv,.mov,.avi,.wmv,.flv,.m4v" multiple style="display:none">
         </div>
         <div class="file-info" id="infoVid">尚未選擇檔案</div>
         <p>壓縮強度 (CRF 畫質參數)：
@@ -105,7 +105,7 @@
                 <option value="18">高品質 (檔案較大)</option>
             </select>
         </p>
-        <button class="action-btn" id="btnVid" onclick="compressVideosFFmpeg()" disabled>開始批次壓縮影片 (保持原格式)</button>
+        <button class="action-btn" id="btnVid" onclick="compressVideosFFmpeg()" disabled>開始批次壓縮影片 (維持原格式)</button>
         <div class="status" id="statusVid">點擊後開始處理</div>
     </div>
 
@@ -144,14 +144,16 @@
             document.getElementById('btnPdf').disabled = filesPdf.length === 0;
         });
 
+        // 圖片：支援所有圖片格式
         setupDropZone('dropZoneImg', 'fileImg', (list) => {
-            filesImg = list.filter(f => f.type.startsWith('image/'));
+            filesImg = list.filter(f => f.type.startsWith('image/') || f.name.match(/\.(jpg|jpeg|png|webp|bmp|heic)$/i));
             document.getElementById('infoImg').innerText = `已選擇 ${filesImg.length} 個檔案：` + filesImg.map(f => f.name).join(', ');
             document.getElementById('btnImg').disabled = filesImg.length === 0;
         });
 
+        // 影片：擴充支援常見影片格式（mp4, mov, mkv, avi, webv, flv 等）
         setupDropZone('dropZoneVid', 'fileVid', (list) => {
-            filesVid = list.filter(f => f.type.startsWith('video/') || f.name.match(/\.(mp4|mov|avi|mkv|webm)$/i));
+            filesVid = list.filter(f => f.type.startsWith('video/') || f.name.match(/\.(mp4|mov|avi|mkv|webm|flv|wmv|m4v)$/i));
             document.getElementById('infoVid').innerText = `已選擇 ${filesVid.length} 個檔案：` + filesVid.map(f => f.name).join(', ');
             document.getElementById('btnVid').disabled = filesVid.length === 0;
         });
@@ -227,7 +229,7 @@
             document.getElementById('btnImg').disabled = false;
         }
 
-        // 3. 影片批次壓縮 (直接讀取同目錄下的 ffmpeg-core.js 與 wasm)
+        // 3. 影片批次壓縮 (自動抓取原檔副檔名，維持同格式輸出)
         let ffmpegInstance = null;
         async function compressVideosFFmpeg() {
             if (filesVid.length === 0) return;
@@ -237,8 +239,7 @@
 
             try {
                 if (!ffmpegInstance) {
-                    status.innerText = '正在初始化影片轉碼核心 (v0.11 穩定版)...';
-                    // 使用舊版的全域建立方式，不透過 Worker
+                    status.innerText = '正在初始化影片轉碼核心...';
                     const { createFFmpeg, fetchFile } = FFmpeg;
                     ffmpegInstance = createFFmpeg({ log: true });
                     await ffmpegInstance.load();
@@ -248,15 +249,17 @@
                     const fileVid = filesVid[idx];
                     status.innerText = `正在壓縮第 ${idx + 1}/${filesVid.length} 支影片：${fileVid.name}`;
 
+                    // 自動取得原本的副檔名（例如 .mov, .mkv, .mp4 等）
                     const extMatch = fileVid.name.match(/\.[^/.]+$/);
-                    const ext = extMatch ? extMatch[0] : '.mp4';
+                    const ext = extMatch ? extMatch[0].toLowerCase() : '.mp4';
+                    
                     const inputName = 'input_' + idx + ext;
                     const outputName = 'output_' + idx + ext;
 
                     // 寫入檔案
                     ffmpegInstance.FS('writeFile', inputName, await FFmpeg.fetchFile(fileVid));
 
-                    // 執行壓縮指令
+                    // 執行壓縮：維持原本的副檔名與容器格式進行重編碼
                     await ffmpegInstance.run(
                         '-i', inputName,
                         '-vcodec', 'libx264',
@@ -265,7 +268,7 @@
                         outputName
                     );
 
-                    // 讀取結果
+                    // 讀取並下載，維持同格式副檔名
                     const data = ffmpegInstance.FS('readFile', outputName);
                     const blob = new Blob([data.buffer], { type: fileVid.type || 'video/mp4' });
                     downloadFile(blob, fileVid.name.replace(/\.[^/.]+$/, "") + '_compressed' + ext);
@@ -275,7 +278,7 @@
                     ffmpegInstance.FS('unlink', outputName);
                 }
 
-                status.innerText = '所有影片批次壓縮完成，皆已維持原格式下載！';
+                status.innerText = '所有影片批次壓縮完成，皆已完美維持原格式下載！';
             } catch (e) {
                 console.error(e);
                 status.innerText = '影片壓縮發生錯誤，請檢查主控台 (F12)。';

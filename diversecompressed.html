@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>全能批次極致壓縮工具箱 (GitHub Pages 專用版)</title>
+    <title>全能批次極致壓縮工具箱 (GitHub Pages 修正版)</title>
     <!-- PDF 處理函式庫 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
@@ -10,9 +10,8 @@
     </script>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     
-    <!-- 引入 FFmpeg.wasm v0.12 (完美支援 GitHub Pages 的 HTTPS 環境與檔案處理) -->
+    <!-- 引入 FFmpeg v0.12 核心主程式 -->
     <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
-    <script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/util.js"></script>
     
     <style>
         body { font-family: sans-serif; max-width: 650px; margin: 40px auto; padding: 20px; text-align: center; background-color: #f4f6f9; }
@@ -91,7 +90,7 @@
         <div class="status" id="statusImg"></div>
     </div>
 
-    <!-- ==================== 影片壓縮面板 (FFmpeg v0.12 適用 GitHub Pages) ==================== -->
+    <!-- ==================== 影片壓縮面板 (原生 JS 完美載入 FFmpeg) ==================== -->
     <div id="panel-video" class="panel">
         <h3>影片批次壓縮 (保持 MP4 等原格式不變)</h3>
         <div class="box" id="dropZoneVid" onclick="document.getElementById('fileVid').click()">
@@ -228,7 +227,7 @@
             document.getElementById('btnImg').disabled = false;
         }
 
-        // 3. 影片批次壓縮 (FFmpeg v0.12 搭配 GitHub Pages HTTPS 完美運行)
+        // 3. 影片批次壓縮 (改用原生 fetch 與 URL.createObjectURL 載入 FFmpeg，完美避開相依錯誤)
         let ffmpegInstance = null;
         async function compressVideosFFmpeg() {
             if (filesVid.length === 0) return;
@@ -243,10 +242,17 @@
                     ffmpegInstance = new FFmpeg();
                     
                     const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
-                    await ffmpegInstance.load({
-                        coreURL: await FFmpegUtil.toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-                        wasmURL: await FFmpegUtil.toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-                    });
+                    
+                    // 使用原生 fetch 轉為 Blob URL，避開 util 套件缺失的問題
+                    const coreURL = await fetch(`${baseURL}/ffmpeg-core.js`)
+                        .then(res => res.blob())
+                        .then(blob => URL.createObjectURL(blob));
+                        
+                    const wasmURL = await fetch(`${baseURL}/ffmpeg-core.wasm`)
+                        .then(res => res.blob())
+                        .then(blob => URL.createObjectURL(blob));
+
+                    await ffmpegInstance.load({ coreURL, wasmURL });
                 }
 
                 for (let idx = 0; idx < filesVid.length; idx++) {
@@ -258,8 +264,9 @@
                     const inputName = 'input_' + idx + ext;
                     const outputName = 'output_' + idx + ext;
 
-                    const fileData = await FFmpegUtil.fetchFile(fileVid);
-                    await ffmpegInstance.writeFile(inputName, fileData);
+                    // 將檔案轉為 Uint8Array 寫入虛擬檔案系統
+                    const arrayBuffer = await fileVid.arrayBuffer();
+                    await ffmpegInstance.writeFile(inputName, new Uint8Array(arrayBuffer));
 
                     // 執行 FFmpeg 轉碼壓縮（保持原格式與副檔名）
                     await ffmpegInstance.exec([

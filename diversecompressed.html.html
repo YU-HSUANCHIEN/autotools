@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>全能批次極致壓縮工具箱 (GitHub Pages 專用版)</title>
+    <!-- PDF 處理函式庫 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    
+    <!-- 引入 FFmpeg.wasm v0.12 (完美支援 GitHub Pages 的 HTTPS 環境與檔案處理) -->
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+    <script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/util.js"></script>
+    
+    <style>
+        body { font-family: sans-serif; max-width: 650px; margin: 40px auto; padding: 20px; text-align: center; background-color: #f4f6f9; }
+        .tabs { display: flex; justify-content: center; margin-bottom: 20px; gap: 10px; }
+        .tab-btn { padding: 10px 20px; border: none; background: #ddd; cursor: pointer; font-size: 16px; border-radius: 5px; font-weight: bold; }
+        .tab-btn.active { background: #007bff; color: white; }
+        
+        .panel { display: none; background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .panel.active { display: block; }
+
+        .box { 
+            border: 2px dashed #007bff; 
+            padding: 30px 20px; 
+            border-radius: 10px; 
+            margin-bottom: 15px; 
+            background: #fafbfc; 
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .box.dragover { background: #e6f0ff; border-color: #0056b3; }
+        .file-info { margin: 10px 0; font-weight: bold; color: #444; max-height: 100px; overflow-y: auto; text-align: left; font-size: 14px; background: #f1f3f5; padding: 10px; border-radius: 5px;}
+        .action-btn { background: #28a745; color: white; border: none; padding: 12px 25px; font-size: 16px; border-radius: 5px; cursor: pointer; margin-top: 10px; }
+        .action-btn:hover { background: #218838; }
+        .action-btn:disabled { background: #ccc; cursor: not-allowed; }
+        .status { margin-top: 15px; font-weight: bold; color: #007bff; }
+        select { padding: 5px; border-radius: 4px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+
+    <h2>🛠️ 全能批次極致壓縮工具箱</h2>
+    <p style="color: #666; margin-bottom: 25px;">PDF、圖片與影片（保持 MP4 等原格式）批次壓縮，完全在瀏覽器安全運行</p>
+
+    <!-- 標籤切換按鈕 -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('pdf')">📄 PDF 批次壓縮</button>
+        <button class="tab-btn" onclick="switchTab('image')">🖼️ 圖片批次壓縮</button>
+        <button class="tab-btn" onclick="switchTab('video')">🎬 影片批次壓縮 (原格式)</button>
+    </div>
+
+    <!-- ==================== PDF 壓縮面板 ==================== -->
+    <div id="panel-pdf" class="panel active">
+        <h3>PDF 檔案批次極致壓縮</h3>
+        <div class="box" id="dropZonePdf" onclick="document.getElementById('filePdf').click()">
+            <p>📁 <b>將多個 PDF 拖曳至此</b> 或點擊選擇</p>
+            <input type="file" id="filePdf" accept="application/pdf" multiple style="display:none">
+        </div>
+        <div class="file-info" id="infoPdf">尚未選擇檔案</div>
+        <p>壓縮品質：
+            <select id="qualityPdf">
+                <option value="0.3">極小 (低畫質)</option>
+                <option value="0.5" selected>標準 (推薦)</option>
+                <option value="0.8">高品質</option>
+            </select>
+        </p>
+        <button class="action-btn" id="btnPdf" onclick="compressPDFs()" disabled>開始批次壓縮 PDF</button>
+        <div class="status" id="statusPdf"></div>
+    </div>
+
+    <!-- ==================== 圖片壓縮面板 ==================== -->
+    <div id="panel-image" class="panel">
+        <h3>圖片批次極致壓縮 (JPG, PNG, WebP 等)</h3>
+        <div class="box" id="dropZoneImg" onclick="document.getElementById('fileImg').click()">
+            <p>📁 <b>將多張圖片拖曳至此</b> 或點擊選擇</p>
+            <input type="file" id="fileImg" accept="image/*" multiple style="display:none">
+        </div>
+        <div class="file-info" id="infoImg">尚未選擇檔案</div>
+        <p>壓縮畫質：
+            <select id="qualityImg">
+                <option value="0.3">極小 (30% 畫質)</option>
+                <option value="0.6" selected>標準 (60% 畫質)</option>
+                <option value="0.8">清晰 (80% 畫質)</option>
+            </select>
+        </p>
+        <button class="action-btn" id="btnImg" onclick="compressImages()" disabled>開始批次壓縮圖片</button>
+        <div class="status" id="statusImg"></div>
+    </div>
+
+    <!-- ==================== 影片壓縮面板 (FFmpeg v0.12 適用 GitHub Pages) ==================== -->
+    <div id="panel-video" class="panel">
+        <h3>影片批次壓縮 (保持 MP4 等原格式不變)</h3>
+        <div class="box" id="dropZoneVid" onclick="document.getElementById('fileVid').click()">
+            <p>📁 <b>將多支影片拖曳至此</b> 或點擊選擇</p>
+            <input type="file" id="fileVid" accept="video/*" multiple style="display:none">
+        </div>
+        <div class="file-info" id="infoVid">尚未選擇檔案</div>
+        <p>壓縮強度 (CRF 畫質參數)：
+            <select id="qualityVid">
+                <option value="28">高壓縮 (檔案極小)</option>
+                <option value="23" selected>標準 (平衡畫質)</option>
+                <option value="18">高品質 (檔案較大)</option>
+            </select>
+        </p>
+        <button class="action-btn" id="btnVid" onclick="compressVideosFFmpeg()" disabled>開始批次壓縮影片 (保持原格式)</button>
+        <div class="status" id="statusVid">點擊後開始處理</div>
+    </div>
+
+    <script>
+        function switchTab(type) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('panel-' + type).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function setupDropZone(dropZoneId, fileInputId, callback) {
+            const dropZone = document.getElementById(dropZoneId);
+            const fileInput = document.getElementById(fileInputId);
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) callback(Array.from(e.target.files));
+            });
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, (e) => { e.preventDefault(); e.stopPropagation(); }, false);
+            });
+            ['dragenter', 'dragover'].forEach(eventName => dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover')));
+            ['dragleave', 'drop'].forEach(eventName => dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover')));
+
+            dropZone.addEventListener('drop', (e) => {
+                if (e.dataTransfer.files.length > 0) callback(Array.from(e.dataTransfer.files));
+            });
+        }
+
+        let filesPdf = [], filesImg = [], filesVid = [];
+
+        setupDropZone('dropZonePdf', 'filePdf', (list) => {
+            filesPdf = list.filter(f => f.type === 'application/pdf');
+            document.getElementById('infoPdf').innerText = `已選擇 ${filesPdf.length} 個檔案：` + filesPdf.map(f => f.name).join(', ');
+            document.getElementById('btnPdf').disabled = filesPdf.length === 0;
+        });
+
+        setupDropZone('dropZoneImg', 'fileImg', (list) => {
+            filesImg = list.filter(f => f.type.startsWith('image/'));
+            document.getElementById('infoImg').innerText = `已選擇 ${filesImg.length} 個檔案：` + filesImg.map(f => f.name).join(', ');
+            document.getElementById('btnImg').disabled = filesImg.length === 0;
+        });
+
+        setupDropZone('dropZoneVid', 'fileVid', (list) => {
+            filesVid = list.filter(f => f.type.startsWith('video/') || f.name.match(/\.(mp4|mov|avi|mkv|webm)$/i));
+            document.getElementById('infoVid').innerText = `已選擇 ${filesVid.length} 個檔案：` + filesVid.map(f => f.name).join(', ');
+            document.getElementById('btnVid').disabled = filesVid.length === 0;
+        });
+
+        // 1. PDF 批次壓縮
+        async function compressPDFs() {
+            if (filesPdf.length === 0) return;
+            const status = document.getElementById('statusPdf');
+            const quality = parseFloat(document.getElementById('qualityPdf').value);
+            document.getElementById('btnPdf').disabled = true;
+
+            for (let idx = 0; idx < filesPdf.length; idx++) {
+                const filePdf = filesPdf[idx];
+                status.innerText = `正在處理第 ${idx + 1}/${filesPdf.length} 個 PDF：${filePdf.name}`;
+                try {
+                    const arrayBuffer = await filePdf.arrayBuffer();
+                    const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                    const newPdfDoc = await PDFLib.PDFDocument.create();
+
+                    for (let i = 1; i <= pdfDoc.numPages; i++) {
+                        const page = await pdfDoc.getPage(i);
+                        const viewport = page.getViewport({ scale: 1.5 });
+                        const canvas = document.createElement('canvas');
+                        canvas.width = viewport.width; canvas.height = viewport.height;
+                        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+
+                        const jpegBytes = await fetch(canvas.toDataURL('image/jpeg', quality)).then(r => r.arrayBuffer());
+                        const img = await newPdfDoc.embedJpg(jpegBytes);
+                        const newPage = newPdfDoc.addPage([viewport.width, viewport.height]);
+                        newPage.drawImage(img, { x: 0, y: 0, width: viewport.width, height: viewport.height });
+                    }
+
+                    const pdfBytes = await newPdfDoc.save();
+                    downloadFile(new Blob([pdfBytes], { type: 'application/pdf' }), filePdf.name.replace('.pdf', '_compressed.pdf'));
+                } catch (e) { console.error(e); }
+            }
+            status.innerText = '所有 PDF 批次壓縮完成！';
+            document.getElementById('btnPdf').disabled = false;
+        }
+
+        // 2. 圖片批次壓縮
+        async function compressImages() {
+            if (filesImg.length === 0) return;
+            const status = document.getElementById('statusImg');
+            const quality = parseFloat(document.getElementById('qualityImg').value);
+            document.getElementById('btnImg').disabled = true;
+
+            for (let idx = 0; idx < filesImg.length; idx++) {
+                const fileImg = filesImg[idx];
+                status.innerText = `正在處理第 ${idx + 1}/${filesImg.length} 張圖片：${fileImg.name}`;
+                
+                await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(fileImg);
+                    reader.onload = (event) => {
+                        const img = new Image();
+                        img.src = event.target.result;
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = img.width; canvas.height = img.height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0);
+
+                            canvas.toBlob((blob) => {
+                                downloadFile(blob, fileImg.name.replace(/\.[^/.]+$/, "") + '_compressed.jpg');
+                                resolve();
+                            }, 'image/jpeg', quality);
+                        };
+                    };
+                });
+            }
+            status.innerText = '所有圖片批次壓縮完成！';
+            document.getElementById('btnImg').disabled = false;
+        }
+
+        // 3. 影片批次壓縮 (FFmpeg v0.12 搭配 GitHub Pages HTTPS 完美運行)
+        let ffmpegInstance = null;
+        async function compressVideosFFmpeg() {
+            if (filesVid.length === 0) return;
+            const status = document.getElementById('statusVid');
+            const crfValue = document.getElementById('qualityVid').value;
+            document.getElementById('btnVid').disabled = true;
+
+            try {
+                if (!ffmpegInstance) {
+                    status.innerText = '正在初始化影片轉碼核心 (首次使用需自雲端載入元件，請稍候)...';
+                    const { FFmpeg } = FFmpegWASM;
+                    ffmpegInstance = new FFmpeg();
+                    
+                    const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
+                    await ffmpegInstance.load({
+                        coreURL: await FFmpegUtil.toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+                        wasmURL: await FFmpegUtil.toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+                    });
+                }
+
+                for (let idx = 0; idx < filesVid.length; idx++) {
+                    const fileVid = filesVid[idx];
+                    status.innerText = `正在壓縮第 ${idx + 1}/${filesVid.length} 支影片：${fileVid.name}`;
+
+                    const extMatch = fileVid.name.match(/\.[^/.]+$/);
+                    const ext = extMatch ? extMatch[0] : '.mp4';
+                    const inputName = 'input_' + idx + ext;
+                    const outputName = 'output_' + idx + ext;
+
+                    const fileData = await FFmpegUtil.fetchFile(fileVid);
+                    await ffmpegInstance.writeFile(inputName, fileData);
+
+                    // 執行 FFmpeg 轉碼壓縮（保持原格式與副檔名）
+                    await ffmpegInstance.exec([
+                        '-i', inputName,
+                        '-vcodec', 'libx264',
+                        '-crf', crfValue,
+                        '-preset', 'fast',
+                        outputName
+                    ]);
+
+                    const data = await ffmpegInstance.readFile(outputName);
+                    const blob = new Blob([data.buffer], { type: fileVid.type || 'video/mp4' });
+                    downloadFile(blob, fileVid.name.replace(/\.[^/.]+$/, "") + '_compressed' + ext);
+
+                    await ffmpegInstance.deleteFile(inputName);
+                    await ffmpegInstance.deleteFile(outputName);
+                }
+
+                status.innerText = '所有影片批次壓縮完成，皆已維持原格式下載！';
+            } catch (e) {
+                console.error(e);
+                status.innerText = '影片壓縮發生錯誤，請檢查主控台 (F12)。';
+            } finally {
+                document.getElementById('btnVid').disabled = false;
+            }
+        }
+
+        function downloadFile(blob, filename) {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+        }
+    </script>
+</body>
+</html>

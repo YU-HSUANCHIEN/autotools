@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>全能批次極致壓縮工具箱 (GitHub Pages 最終穩定版)</title>
+    <title>批次極致壓縮工具箱 (GitHub Pages 本地核心版)</title>
     <!-- PDF 處理函式庫 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
@@ -10,8 +10,8 @@
     </script>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     
-    <!-- 改用穩定且不額外依賴外部 Worker 的經典版 FFmpeg -->
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+    <!-- 引入 FFmpeg v0.12 主程式 -->
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
     
     <style>
         body { font-family: sans-serif; max-width: 650px; margin: 40px auto; padding: 20px; text-align: center; background-color: #f4f6f9; }
@@ -90,7 +90,7 @@
         <div class="status" id="statusImg"></div>
     </div>
 
-    <!-- ==================== 影片壓縮面板 (v0.11 經典版) ==================== -->
+    <!-- ==================== 影片壓縮面板 (調用同目錄下的本機核心) ==================== -->
     <div id="panel-video" class="panel">
         <h3>影片批次壓縮 (保持 MP4 等原格式不變)</h3>
         <div class="box" id="dropZoneVid" onclick="document.getElementById('fileVid').click()">
@@ -227,10 +227,8 @@
             document.getElementById('btnImg').disabled = false;
         }
 
-        // 3. 影片批次壓縮 (使用 v0.11 經典版，完美相容 GitHub Pages HTTPS 與跨域環境)
-        const { createFFmpeg, fetchFile } = FFmpeg;
-        const ffmpeg = createFFmpeg({ log: true });
-
+        // 3. 影片批次壓縮 (直接讀取同目錄下的 ffmpeg-core.js 與 wasm)
+        let ffmpegInstance = null;
         async function compressVideosFFmpeg() {
             if (filesVid.length === 0) return;
             const status = document.getElementById('statusVid');
@@ -238,9 +236,16 @@
             document.getElementById('btnVid').disabled = true;
 
             try {
-                if (!ffmpeg.isLoaded()) {
-                    status.innerText = '正在初始化影片轉碼核心 (首次使用需載入元件，請稍候)...';
-                    await ffmpeg.load();
+                if (!ffmpegInstance) {
+                    status.innerText = '正在初始化本地影片轉碼核心，請稍候...';
+                    const { FFmpeg } = FFmpegWASM;
+                    ffmpegInstance = new FFmpeg();
+                    
+                    const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
+                    const coreURL = `${baseURL}/ffmpeg-core.js`;
+                    const wasmURL = `${baseURL}/ffmpeg-core.wasm`;
+
+                    await ffmpegInstance.load({ coreURL, wasmURL });
                 }
 
                 for (let idx = 0; idx < filesVid.length; idx++) {
@@ -249,25 +254,32 @@
 
                     const extMatch = fileVid.name.match(/\.[^/.]+$/);
                     const ext = extMatch ? extMatch[0] : '.mp4';
-                    const inputName = 'input' + ext;
-                    const outputName = 'output' + ext;
+                    const inputName = 'input_' + idx + ext;
+                    const outputName = 'output_' + idx + ext;
 
-                    ffmpeg.FS('writeFile', inputName, await fetchFile(fileVid));
+                    const arrayBuffer = await fileVid.arrayBuffer();
+                    await ffmpegInstance.writeFile(inputName, new Uint8Array(arrayBuffer));
 
-                    await ffmpeg.run('-i', inputName, '-vcodec', 'libx264', '-crf', crfValue, '-preset', 'fast', outputName);
+                    await ffmpegInstance.exec([
+                        '-i', inputName,
+                        '-vcodec', 'libx264',
+                        '-crf', crfValue,
+                        '-preset', 'fast',
+                        outputName
+                    ]);
 
-                    const data = ffmpeg.FS('readFile', outputName);
+                    const data = await ffmpegInstance.readFile(outputName);
                     const blob = new Blob([data.buffer], { type: fileVid.type || 'video/mp4' });
                     downloadFile(blob, fileVid.name.replace(/\.[^/.]+$/, "") + '_compressed' + ext);
 
-                    ffmpeg.FS('unlink', inputName);
-                    ffmpeg.FS('unlink', outputName);
+                    await ffmpegInstance.deleteFile(inputName);
+                    await ffmpegInstance.deleteFile(outputName);
                 }
 
                 status.innerText = '所有影片批次壓縮完成，皆已維持原格式下載！';
             } catch (e) {
                 console.error(e);
-                status.innerText = '影片壓縮發生錯誤，請重新整理頁面後再試一次。';
+                status.innerText = '影片壓縮發生錯誤，請檢查主控台 (F12)。';
             } finally {
                 document.getElementById('btnVid').disabled = false;
             }

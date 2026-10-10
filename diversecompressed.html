@@ -264,6 +264,7 @@
         }
 
         // 3. 影片批次壓縮 (改用 ultrafast 極速模式)
+        // 3. 影片批次壓縮 (加入嚴格的載入狀態檢查)
         let ffmpegInstance = null;
         async function compressVideosFFmpeg() {
             if (filesVid.length === 0) return;
@@ -280,6 +281,12 @@
                     status.innerText = '正在初始化影片轉碼核心...';
                     const { createFFmpeg, fetchFile } = FFmpeg;
                     ffmpegInstance = createFFmpeg({ log: true });
+                }
+
+                // 確保 FFmpeg 已經載入完成
+                if (!ffmpegInstance.isLoaded()) {
+                    status.innerText = '正在下載與載入 FFmpeg 核心元件，首次執行需稍候...';
+                    await ffmpegInstance.load();
                 }
 
                 for (let idx = 0; idx < filesVid.length; idx++) {
@@ -321,7 +328,7 @@
                     // 寫入檔案
                     ffmpegInstance.FS('writeFile', inputName, await FFmpeg.fetchFile(fileVid));
 
-                    // 執行壓縮：將 preset 改為 ultrafast
+                    // 執行壓縮
                     await ffmpegInstance.run(
                         '-i', inputName,
                         '-vcodec', 'libx264',

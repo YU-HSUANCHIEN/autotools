@@ -11,7 +11,7 @@
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     
     <!-- 引入 FFmpeg v0.12 主程式 -->
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
     
     <style>
         body { font-family: sans-serif; max-width: 650px; margin: 40px auto; padding: 20px; text-align: center; background-color: #f4f6f9; }
@@ -237,15 +237,11 @@
 
             try {
                 if (!ffmpegInstance) {
-                    status.innerText = '正在初始化本地影片轉碼核心，請稍候...';
-                    const { FFmpeg } = FFmpegWASM;
-                    ffmpegInstance = new FFmpeg();
-                    
-                    const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
-                    const coreURL = `${baseURL}/ffmpeg-core.js`;
-                    const wasmURL = `${baseURL}/ffmpeg-core.wasm`;
-
-                    await ffmpegInstance.load({ coreURL, wasmURL });
+                    status.innerText = '正在初始化影片轉碼核心 (v0.11 穩定版)...';
+                    // 使用舊版的全域建立方式，不透過 Worker
+                    const { createFFmpeg, fetchFile } = FFmpeg;
+                    ffmpegInstance = createFFmpeg({ log: true });
+                    await ffmpegInstance.load();
                 }
 
                 for (let idx = 0; idx < filesVid.length; idx++) {
@@ -257,23 +253,26 @@
                     const inputName = 'input_' + idx + ext;
                     const outputName = 'output_' + idx + ext;
 
-                    const arrayBuffer = await fileVid.arrayBuffer();
-                    await ffmpegInstance.writeFile(inputName, new Uint8Array(arrayBuffer));
+                    // 寫入檔案
+                    ffmpegInstance.FS('writeFile', inputName, await FFmpeg.fetchFile(fileVid));
 
-                    await ffmpegInstance.exec([
+                    // 執行壓縮指令
+                    await ffmpegInstance.run(
                         '-i', inputName,
                         '-vcodec', 'libx264',
                         '-crf', crfValue,
                         '-preset', 'fast',
                         outputName
-                    ]);
+                    );
 
-                    const data = await ffmpegInstance.readFile(outputName);
+                    // 讀取結果
+                    const data = ffmpegInstance.FS('readFile', outputName);
                     const blob = new Blob([data.buffer], { type: fileVid.type || 'video/mp4' });
                     downloadFile(blob, fileVid.name.replace(/\.[^/.]+$/, "") + '_compressed' + ext);
 
-                    await ffmpegInstance.deleteFile(inputName);
-                    await ffmpegInstance.deleteFile(outputName);
+                    // 清理暫存檔
+                    ffmpegInstance.FS('unlink', inputName);
+                    ffmpegInstance.FS('unlink', outputName);
                 }
 
                 status.innerText = '所有影片批次壓縮完成，皆已維持原格式下載！';

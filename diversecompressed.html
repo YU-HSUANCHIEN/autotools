@@ -237,16 +237,16 @@
 
             try {
                 if (!ffmpegInstance) {
-                    status.innerText = '正在初始化影片轉碼核心 (首次使用需自雲端載入元件，請稍候)...';
+                    status.innerText = '正在初始化影片轉碼核心 (首次使用需載入元件，請稍候)...';
                     const { FFmpeg } = FFmpegWASM;
                     ffmpegInstance = new FFmpeg();
                     
                     const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
                     
-                    // 使用原生 fetch 轉為 Blob URL，避開 util 套件缺失的問題
+                    // 同步下載核心與 Worker 腳本並轉為 Blob URL，徹底避開 CORS 阻擋
                     const coreURL = await fetch(`${baseURL}/ffmpeg-core.js`)
-                        .then(res => res.blob())
-                        .then(blob => URL.createObjectURL(blob));
+                        .then(res => res.text())
+                        .then(text => URL.createObjectURL(new Blob([text], { type: 'text/javascript' })));
                         
                     const wasmURL = await fetch(`${baseURL}/ffmpeg-core.wasm`)
                         .then(res => res.blob())
@@ -264,11 +264,9 @@
                     const inputName = 'input_' + idx + ext;
                     const outputName = 'output_' + idx + ext;
 
-                    // 將檔案轉為 Uint8Array 寫入虛擬檔案系統
                     const arrayBuffer = await fileVid.arrayBuffer();
                     await ffmpegInstance.writeFile(inputName, new Uint8Array(arrayBuffer));
 
-                    // 執行 FFmpeg 轉碼壓縮（保持原格式與副檔名）
                     await ffmpegInstance.exec([
                         '-i', inputName,
                         '-vcodec', 'libx264',

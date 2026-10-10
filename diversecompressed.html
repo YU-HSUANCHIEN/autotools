@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>全能批次極致壓縮工具箱 (Vercel 穩定版)</title>
+    <title>全能批次極致壓縮工具箱 (Vercel 極速版)</title>
     <!-- PDF 處理函式庫 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
@@ -10,7 +10,7 @@
     </script>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     
-    <!-- 引入穩定版 FFmpeg (v0.11.6，不依賴外部 Worker，完美相容 Vercel) -->
+    <!-- 引入穩定版 FFmpeg (v0.11.6) -->
     <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
     
     <style>
@@ -38,6 +38,35 @@
         .action-btn:disabled { background: #ccc; cursor: not-allowed; }
         .status { margin-top: 15px; font-weight: bold; color: #007bff; }
         select { padding: 5px; border-radius: 4px; border: 1px solid #ccc; }
+
+        /* 進度條與預估時間樣式 */
+        .progress-container {
+            width: 100%;
+            background-color: #e9ecef;
+            border-radius: 8px;
+            margin-top: 15px;
+            overflow: hidden;
+            display: none;
+            height: 22px;
+            border: 1px solid #ced4da;
+            position: relative;
+        }
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background-color: #007bff;
+            text-align: center;
+            color: white;
+            font-size: 12px;
+            line-height: 22px;
+            transition: width 0.1s ease;
+        }
+        .time-estimate {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #555;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
@@ -49,7 +78,7 @@
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('pdf')">📄 PDF 批次壓縮</button>
         <button class="tab-btn" onclick="switchTab('image')">🖼️ 圖片批次壓縮</button>
-        <button class="tab-btn" onclick="switchTab('video')">🎬 影片批次壓縮 (維持同格式)</button>
+        <button class="tab-btn" onclick="switchTab('video')">🎬 影片批次壓縮 (極速模式)</button>
     </div>
 
     <!-- ==================== PDF 壓縮面板 ==================== -->
@@ -71,7 +100,7 @@
         <div class="status" id="statusPdf"></div>
     </div>
 
-    <!-- ==================== 圖片壓縮面板 (擴充全格式) ==================== -->
+    <!-- ==================== 圖片壓縮面板 ==================== -->
     <div id="panel-image" class="panel">
         <h3>圖片批次極致壓縮 (支援 JPG, PNG, WebP, BMP 等)</h3>
         <div class="box" id="dropZoneImg" onclick="document.getElementById('fileImg').click()">
@@ -90,9 +119,9 @@
         <div class="status" id="statusImg"></div>
     </div>
 
-    <!-- ==================== 影片壓縮面板 (擴充全格式，維持同格式) ==================== -->
+    <!-- ==================== 影片壓縮面板 (極速模式) ==================== -->
     <div id="panel-video" class="panel">
-        <h3>影片批次壓縮 (支援 MP4, MOV, MKV, AVI, WebM 等，維持原格式輸出)</h3>
+        <h3>影片批次壓縮 (支援多格式，維持原格式輸出)</h3>
         <div class="box" id="dropZoneVid" onclick="document.getElementById('fileVid').click()">
             <p>📁 <b>將多支影片拖曳至此</b> 或點擊選擇</p>
             <input type="file" id="fileVid" accept="video/*,.mkv,.mov,.avi,.wmv,.flv,.m4v" multiple style="display:none">
@@ -105,7 +134,14 @@
                 <option value="18">高品質 (檔案較大)</option>
             </select>
         </p>
-        <button class="action-btn" id="btnVid" onclick="compressVideosFFmpeg()" disabled>開始批次壓縮影片 (維持原格式)</button>
+        <button class="action-btn" id="btnVid" onclick="compressVideosFFmpeg()" disabled>開始批次壓縮影片 (極速模式)</button>
+        
+        <!-- 進度條與預估時間介面 -->
+        <div class="progress-container" id="progressContainerVid">
+            <div class="progress-bar" id="progressBarVid">0%</div>
+        </div>
+        <div class="time-estimate" id="timeEstimateVid"></div>
+
         <div class="status" id="statusVid">點擊後開始處理</div>
     </div>
 
@@ -144,14 +180,12 @@
             document.getElementById('btnPdf').disabled = filesPdf.length === 0;
         });
 
-        // 圖片：支援所有圖片格式
         setupDropZone('dropZoneImg', 'fileImg', (list) => {
             filesImg = list.filter(f => f.type.startsWith('image/') || f.name.match(/\.(jpg|jpeg|png|webp|bmp|heic)$/i));
             document.getElementById('infoImg').innerText = `已選擇 ${filesImg.length} 個檔案：` + filesImg.map(f => f.name).join(', ');
             document.getElementById('btnImg').disabled = filesImg.length === 0;
         });
 
-        // 影片：擴充支援常見影片格式（mp4, mov, mkv, avi, webv, flv 等）
         setupDropZone('dropZoneVid', 'fileVid', (list) => {
             filesVid = list.filter(f => f.type.startsWith('video/') || f.name.match(/\.(mp4|mov|avi|mkv|webm|flv|wmv|m4v)$/i));
             document.getElementById('infoVid').innerText = `已選擇 ${filesVid.length} 個檔案：` + filesVid.map(f => f.name).join(', ');
@@ -229,46 +263,74 @@
             document.getElementById('btnImg').disabled = false;
         }
 
-        // 3. 影片批次壓縮 (自動抓取原檔副檔名，維持同格式輸出)
+        // 3. 影片批次壓縮 (改用 ultrafast 極速模式)
         let ffmpegInstance = null;
         async function compressVideosFFmpeg() {
             if (filesVid.length === 0) return;
             const status = document.getElementById('statusVid');
+            const progressContainer = document.getElementById('progressContainerVid');
+            const progressBar = document.getElementById('progressBarVid');
+            const timeEstimate = document.getElementById('timeEstimateVid');
             const crfValue = document.getElementById('qualityVid').value;
             document.getElementById('btnVid').disabled = true;
+            progressContainer.style.display = 'block';
 
             try {
                 if (!ffmpegInstance) {
                     status.innerText = '正在初始化影片轉碼核心...';
                     const { createFFmpeg, fetchFile } = FFmpeg;
                     ffmpegInstance = createFFmpeg({ log: true });
-                    await ffmpegInstance.load();
                 }
 
                 for (let idx = 0; idx < filesVid.length; idx++) {
                     const fileVid = filesVid[idx];
-                    status.innerText = `正在壓縮第 ${idx + 1}/${filesVid.length} 支影片：${fileVid.name}`;
+                    status.innerText = `正在壓縮第 ${idx + 1}/${filesVid.length} 支影片 (極速模式)：${fileVid.name}`;
+                    progressBar.style.width = '0%';
+                    progressBar.innerText = '0%';
+                    timeEstimate.innerText = '正在計算預估時間...';
 
-                    // 自動取得原本的副檔名（例如 .mov, .mkv, .mp4 等）
+                    let startTime = Date.now();
+
+                    ffmpegInstance.setProgress(({ ratio }) => {
+                        if (ratio >= 0 && ratio <= 1) {
+                            const percent = Math.round(ratio * 100);
+                            progressBar.style.width = percent + '%';
+                            progressBar.innerText = percent + '%';
+
+                            if (percent > 2) {
+                                let elapsedTime = (Date.now() - startTime) / 1000;
+                                let estimatedTotalTime = elapsedTime / ratio;
+                                let remainingTime = Math.round(estimatedTotalTime - elapsedTime);
+
+                                if (remainingTime > 0) {
+                                    let mins = Math.floor(remainingTime / 60);
+                                    let secs = remainingTime % 60;
+                                    timeEstimate.innerText = `⏳ 預估剩餘時間：${mins > 0 ? mins + '分 ' : ''}${secs}秒`;
+                                } else {
+                                    timeEstimate.innerText = '⏳ 即將完成...';
+                                }
+                            }
+                        }
+                    });
+
                     const extMatch = fileVid.name.match(/\.[^/.]+$/);
                     const ext = extMatch ? extMatch[0].toLowerCase() : '.mp4';
-                    
                     const inputName = 'input_' + idx + ext;
                     const outputName = 'output_' + idx + ext;
 
                     // 寫入檔案
                     ffmpegInstance.FS('writeFile', inputName, await FFmpeg.fetchFile(fileVid));
 
-                    // 執行壓縮：維持原本的副檔名與容器格式進行重編碼
+                    // 執行壓縮：將 preset 改為 ultrafast
                     await ffmpegInstance.run(
                         '-i', inputName,
                         '-vcodec', 'libx264',
                         '-crf', crfValue,
-                        '-preset', 'fast',
+                        '-preset', 'ultrafast',
                         outputName
                     );
 
-                    // 讀取並下載，維持同格式副檔名
+                    // 讀取並下載
                     const data = ffmpegInstance.FS('readFile', outputName);
                     const blob = new Blob([data.buffer], { type: fileVid.type || 'video/mp4' });
                     downloadFile(blob, fileVid.name.replace(/\.[^/.]+$/, "") + '_compressed' + ext);
@@ -279,9 +341,13 @@
                 }
 
                 status.innerText = '所有影片批次壓縮完成，皆已完美維持原格式下載！';
+                progressBar.style.width = '100%';
+                progressBar.innerText = '100%';
+                timeEstimate.innerText = '✅ 全部處理完畢！';
             } catch (e) {
                 console.error(e);
                 status.innerText = '影片壓縮發生錯誤，請檢查主控台 (F12)。';
+                timeEstimate.innerText = '';
             } finally {
                 document.getElementById('btnVid').disabled = false;
             }

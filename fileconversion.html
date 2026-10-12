@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusMedia Studio — 頂級多媒體轉檔</title>
+    <!-- 引入 heic2any 專門處理蘋果 HEIC 格式解碼 -->
+    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+    <style>
+        :root {
+            --bg-base: #090d16;
+            --glass-bg: rgba(18, 24, 38, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --accent-glow: rgba(99, 102, 241, 0.25);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --radius: 16px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+            background: var(--bg-base);
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(236, 72, 153, 0.08) 0%, transparent 40%);
+            color: var(--text-main);
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 16px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #818cf8 0%, #f472b6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0 0 4px 0;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 13px;
+            margin: 0;
+        }
+
+        /* 標籤頁設計 */
+        .tabs {
+            display: flex;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 16px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.25s ease;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: #ffffff;
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+
+        /* 卡片設計 */
+        .card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--glass-border);
+            padding: 24px;
+            border-radius: var(--radius);
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+            display: none;
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        .card.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        select {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            font-size: 14px;
+            background: rgba(15, 23, 42, 0.8);
+            color: var(--text-main);
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394a3b8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            background-size: 10px;
+            transition: all 0.2s;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        /* 拖曳區塊 */
+        .drop-zone {
+            border: 2px dashed rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 24px 16px;
+            text-align: center;
+            background: rgba(15, 23, 42, 0.4);
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .drop-icon {
+            font-size: 28px;
+            margin-bottom: 6px;
+        }
+
+        .drop-zone p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .file-list {
+            margin-top: 10px;
+            font-size: 12px;
+            color: var(--text-muted);
+            max-height: 90px;
+            overflow-y: auto;
+            text-align: left;
+            background: rgba(15, 23, 42, 0.6);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+        }
+
+        /* 進度條外觀 */
+        .progress-container {
+            margin-top: 16px;
+            display: none;
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #6366f1, #ec4899);
+            border-radius: 4px;
+            transition: width 0.15s ease;
+        }
+
+        /* 按鈕 */
+        .action-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 14px var(--accent-glow);
+            transition: all 0.2s ease;
+        }
+
+        .action-btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .action-btn:active {
+            transform: translateY(0);
+        }
+
+        .action-btn:disabled {
+            background: #334155;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+            color: #64748b;
+        }
+
+        .status-box {
+            margin-top: 14px;
+            padding: 10px 12px;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--glass-border);
+            border-left: 3px solid var(--primary);
+            border-radius: 8px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .tip {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>NexusMedia</h1>
+            <p class="subtitle">極速多媒體萬能轉檔工作室</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('image')">📷 圖片轉檔 (含 HEIC)</button>
+            <button class="tab-btn" onclick="switchTab('video')">🎬 影片轉檔</button>
+        </div>
+
+        <!-- 圖片轉檔面板 -->
+        <div id="imageCard" class="card active">
+            <div class="form-group">
+                <label>選擇或拖曳圖片檔案</label>
+                <div class="drop-zone" id="imageDropZone" onclick="document.getElementById('imageInput').click()">
+                    <div class="drop-icon">🖼️</div>
+                    <p>支援 HEIC, JPG, PNG, WebP 等（可多選）</p>
+                    <input type="file" id="imageInput" accept="image/*,.heic,.heif" multiple style="display: none;">
+                </div>
+                <div id="imageList" class="file-list" style="display: none;"></div>
+            </div>
+            
+            <div class="form-group">
+                <label>目標輸出格式</label>
+                <select id="imageTargetFormat">
+                    <option value="image/jpeg">JPG / JPEG (.jpg)</option>
+                    <option value="image/png">PNG (.png)</option>
+                    <option value="image/webp">WebP (.webp)</option>
+                    <option value="image/avif">AVIF (.avif)</option>
+                    <option value="image/bmp">BMP (.bmp)</option>
+                    <option value="image/gif">GIF (.gif)</option>
+                </select>
+            </div>
+
+            <div class="progress-container" id="imageProgressContainer">
+                <div class="progress-info">
+                    <span id="imageProgressText">準備轉檔...</span>
+                    <span id="imageTimeText">預估剩餘：計算中...</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="imageProgressBar"></div>
+                </div>
+            </div>
+
+            <button class="action-btn" id="imageBtn" onclick="convertImages()" style="margin-top: 16px;">開始批量轉換圖片</button>
+        </div>
+
+        <!-- 影片轉檔面板 -->
+        <div id="videoCard" class="card">
+            <p class="tip">💡 首次使用影片轉檔需背景加載核心（約 30MB），請稍候。</p>
+            
+            <div class="form-group">
+                <label>選擇或拖曳影音檔案</label>
+                <div class="drop-zone" id="videoDropZone" onclick="document.getElementById('videoInput').click()">
+                    <div class="drop-icon">🎞️</div>
+                    <p>支援 MP4, MKV, AVI, MOV, 3GP 等（可多選）</p>
+                    <input type="file" id="videoInput" accept="video/*,audio/*" multiple style="display: none;">
+                </div>
+                <div id="videoList" class="file-list" style="display: none;"></div>
+            </div>
+            
+            <div class="form-group">
+                <label>目標輸出格式</label>
+                <select id="videoTargetExt">
+                    <optgroup label="主流影片格式">
+                        <option value="mp4">MP4 (.mp4)</option>
+                        <option value="webm">WebM (.webm)</option>
+                        <option value="mkv">MKV (.mkv)</option>
+                        <option value="avi">AVI (.avi)</option>
+                        <option value="mov">MOV (.mov)</option>
+                        <option value="flv">FLV (.flv)</option>
+                        <option value="wmv">WMV (.wmv)</option>
+                        <option value="ogv">OGV (.ogv)</option>
+                    </optgroup>
+                    <optgroup label="特殊與音訊格式">
+                        <option value="gif">動態 GIF (.gif)</option>
+                        <option value="mp3">純音訊 MP3 (.mp3)</option>
+                        <option value="wav">純音訊 WAV (.wav)</option>
+                        <option value="aac">純音訊 AAC (.aac)</option>
+                        <option value="flac">無損音訊 FLAC (.flac)</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <div class="progress-container" id="videoProgressContainer">
+                <div class="progress-info">
+                    <span id="videoProgressText">準備轉檔...</span>
+                    <span id="videoTimeText">預估剩餘：計算中...</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" id="videoProgressBar"></div>
+                </div>
+            </div>
+
+            <button id="videoBtn" class="action-btn" onclick="convertVideos()" style="margin-top: 16px;">開始批量轉換影片</button>
+            <div id="status" class="status-box">狀態：就緒</div>
+        </div>
+    </div>
+
+    <!-- FFmpeg.wasm 核心庫 -->
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd/ffmpeg.js"></script>
+    <script src="https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js"></script>
+
+    <script>
+        // 標籤切換
+        function switchTab(type) {
+            document.getElementById('imageCard').classList.toggle('active', type === 'image');
+            document.getElementById('videoCard').classList.toggle('active', type === 'video');
+            document.querySelectorAll('.tab-btn').forEach((btn, idx) => {
+                btn.classList.toggle('active', (type === 'image' && idx === 0) || (type === 'video' && idx === 1));
+            });
+        }
+
+        // 拖曳上傳互動綁定
+        function setupDropZone(dropZoneId, inputId, listId) {
+            const dropZone = document.getElementById(dropZoneId);
+            const input = document.getElementById(inputId);
+            const list = document.getElementById(listId);
+
+            ['dragenter', 'dragover'].forEach(eName => {
+                dropZone.addEventListener(eName, (e) => { e.preventDefault(); dropZone.classList.add('dragover'); }, false);
+            });
+            ['dragleave', 'drop'].forEach(eName => {
+                dropZone.addEventListener(eName, (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); }, false);
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                input.files = e.dataTransfer.files;
+                updateFileList(input, list);
+            });
+
+            input.addEventListener('change', () => {
+                updateFileList(input, list);
+            });
+        }
+
+        function updateFileList(input, listElement) {
+            if (input.files.length > 0) {
+                listElement.style.display = 'block';
+                let names = [];
+                for (let file of input.files) {
+                    names.push(`• ${file.name}`);
+                }
+                listElement.innerHTML = `已選擇 <b>${input.files.length}</b> 個檔案：<br>` + names.join('<br>');
+            } else {
+                listElement.style.display = 'none';
+            }
+        }
+
+        function clearFiles(inputId, listId) {
+            const input = document.getElementById(inputId);
+            const list = document.getElementById(listId);
+            input.value = '';
+            list.style.display = 'none';
+            list.innerHTML = '';
+        }
+
+        setupDropZone('imageDropZone', 'imageInput', 'imageList');
+        setupDropZone('videoDropZone', 'videoInput', 'videoList');
+
+        // 格式化剩餘時間顯示
+        function formatTime(seconds) {
+            if (isNaN(seconds) || seconds < 0) return '計算中...';
+            if (seconds < 1) return '即將完成';
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60);
+            return m > 0 ? `約剩餘 ${m} 分 ${s} 秒` : `約剩餘 ${s} 秒`;
+        }
+
+        // 批量圖片轉檔 (具備進度條與預估時間)
+        async function convertImages() {
+            const fileInput = document.getElementById('imageInput');
+            const formatSelect = document.getElementById('imageTargetFormat').value;
+            const btn = document.getElementById('imageBtn');
+            const container = document.getElementById('imageProgressContainer');
+            const bar = document.getElementById('imageProgressBar');
+            const progressText = document.getElementById('imageProgressText');
+            const timeText = document.getElementById('imageTimeText');
+
+            if (fileInput.files.length === 0) {
+                alert('請先選擇或拖入圖片！');
+                return;
+            }
+
+            btn.disabled = true;
+            container.style.display = 'block';
+            const total = fileInput.files.length;
+            const ext = formatSelect.split('/')[1];
+            const startTime = Date.now();
+
+            try {
+                for (let i = 0; i < total; i++) {
+                    const file = fileInput.files[i];
+                    progressText.innerText = `正在處理 (${i + 1}/${total}): ${file.name}`;
+                    
+                    // 計算預估剩餘時間
+                    const elapsed = (Date.now() - startTime) / 1000;
+                    const avgTimePerFile = elapsed / (i + 1);
+                    const remainingFiles = total - (i + 1);
+                    timeText.innerText = formatTime(avgTimePerFile * remainingFiles);
+
+                    let targetBlob = file;
+                    const isHeic = file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif') || file.type === 'image/heic';
+
+                    if (isHeic) {
+                        try {
+                            const convertedHeic = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 });
+                            targetBlob = Array.isArray(convertedHeic) ? convertedHeic[0] : convertedHeic;
+                        } catch (err) {
+                            console.error('HEIC 解碼失敗:', err);
+                            continue;
+                        }
+                    }
+
+                    await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.readAsDataURL(targetBlob);
+                        reader.onload = function (event) {
+                            const img = new Image();
+                            img.src = event.target.result;
+                            img.onload = function () {
+                                const canvas = document.createElement('canvas');
+                                canvas.width = img.width;
+                                canvas.height = img.height;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0);
+
+                                let dataUrl;
+                                try {
+                                    dataUrl = canvas.toDataURL(formatSelect, 0.9);
+                                } catch (e) {
+                                    dataUrl = canvas.toDataURL('image/png', 0.9);
+                                }
+
+                                const a = document.createElement('a');
+                                a.href = dataUrl;
+                                const originalName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+                                a.download = `${originalName}_converted.${ext}`;
+                                a.click();
+                                resolve();
+                            };
+                        };
+                    });
+
+                    const percent = Math.round(((i + 1) / total) * 100);
+                    bar.style.width = percent + '%';
+                }
+
+                progressText.innerText = '全部圖片轉檔完成！';
+                timeText.innerText = '已自動下載全部檔案';
+                clearFiles('imageInput', 'imageList');
+            } catch (error) {
+                console.error(error);
+                progressText.innerText = '轉檔過程發生錯誤';
+            } finally {
+                btn.disabled = false;
+                setTimeout(() => { container.style.display = 'none'; bar.style.width = '0%'; }, 4000);
+            }
+        }
+
+        // 批量影片轉檔 (FFmpeg.wasm)
+        let ffmpegInstance = null;
+
+        async function loadFFmpeg() {
+            if (ffmpegInstance) return ffmpegInstance;
+            const { FFmpeg } = FFmpegWASM;
+            const ffmpeg = new FFmpeg();
+            const statusDiv = document.getElementById('status');
+            
+            statusDiv.innerText = '狀態：正在加載 FFmpeg 核心...';
+
+            const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd';
+            await ffmpeg.load({
+                coreURL: await FFmpegUtil.toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+                wasmURL: await FFmpegUtil.toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+            });
+
+            ffmpegInstance = ffmpeg;
+            statusDiv.innerText = '狀態：FFmpeg 加載完成！';
+            return ffmpeg;
+        }
+
+        async function convertVideos() {
+            const fileInput = document.getElementById('videoInput');
+            const targetExt = document.getElementById('videoTargetExt').value;
+            const statusDiv = document.getElementById('status');
+            const btn = document.getElementById('videoBtn');
+            const container = document.getElementById('videoProgressContainer');
+            const bar = document.getElementById('videoProgressBar');
+            const progressText = document.getElementById('videoProgressText');
+            const timeText = document.getElementById('videoTimeText');
+
+            if (fileInput.files.length === 0) {
+                alert('請先選擇或拖入影音檔案！');
+                return;
+            }
+
+            btn.disabled = true;
+            container.style.display = 'block';
+
+            try {
+                const ffmpeg = await loadFFmpeg();
+                const total = fileInput.files.length;
+                const startTime = Date.now();
+
+                for (let i = 0; i < total; i++) {
+                    const file = fileInput.files[i];
+                    progressText.innerText = `正在轉檔 (${i + 1}/${total}): ${file.name}`;
+                    
+                    const elapsed = (Date.now() - startTime) / 1000;
+                    const avgTime = elapsed / (i + 1);
+                    timeText.innerText = formatTime(avgTime * (total - (i + 1)));
+
+                    const inputName = `input_${i}_${file.name}`;
+                    const outputName = `output_${i}.${targetExt}`;
+
+                    await ffmpeg.writeFile(inputName, await FFmpegUtil.fetchFile(file));
+
+                    if (targetExt === 'gif') {
+                        await ffmpeg.exec(['-i', inputName, '-vf', 'fps=15,scale=480:-1:flags=lanczos', outputName]);
+                    } else {
+                        await ffmpeg.exec(['-i', inputName, outputName]);
+                    }
+
+                    const data = await ffmpeg.readFile(outputName);
+                    const blob = new Blob([data.buffer]);
+                    const url = URL.createObjectURL(blob);
+                    
+                    const a = document.createElement('a');
+                    a.href = url;
+                    const originalName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+                    a.download = `${originalName}_converted.${targetExt}`;
+                    a.click();
+
+                    const percent = Math.round(((i + 1) / total) * 100);
+                    bar.style.width = percent + '%';
+                }
+
+                progressText.innerText = '全部影片轉檔完成！';
+                timeText.innerText = '已全部下載完畢';
+                statusDiv.innerText = '狀態：全部影片批量轉檔成功！';
+                clearFiles('videoInput', 'videoList');
+            } catch (error) {
+                console.error(error);
+                statusDiv.innerText = '狀態：轉檔失敗，請確認檔案格式相容性。';
+                progressText.innerText = '轉檔失敗';
+            } finally {
+                btn.disabled = false;
+                setTimeout(() => { container.style.display = 'none'; bar.style.width = '0%'; }, 4000);
+            }
+        }
+    </script>
+</body>
+</html>

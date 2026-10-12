@@ -431,30 +431,9 @@
             alert('所有圖片轉檔並下載完成！');
         }
 
-        // === FFmpeg v0.11.6 影音轉檔引擎 (使用 jsDelivr CDN 避開 CORS 錯誤) ===
+        // === FFmpeg v0.11.6 影音轉檔引擎 (按下按鈕時才初始化載入) ===
         const { createFFmpeg, fetchFile } = FFmpeg;
         let ffmpeg = null;
-        let isReady = false;
-
-        async function initFFmpeg() {
-            if (ffmpeg) return;
-            try {
-                ffmpeg = createFFmpeg({
-                    corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.6/dist/ffmpeg-core.js',
-                    log: true
-                });
-                await ffmpeg.load();
-                isReady = true;
-                console.log('FFmpeg 預載入成功！');
-            } catch (err) {
-                console.error('FFmpeg 初始化失敗:', err);
-            }
-        }
-
-        // 網頁開檔即背景預載入
-        window.addEventListener('DOMContentLoaded', () => {
-            initFFmpeg();
-        });
 
         async function convertVideos() {
             const input = document.getElementById('videoInput');
@@ -473,17 +452,18 @@
             btn.disabled = true;
             progressBox.style.display = 'block';
 
-            if (!isReady) {
-                statusText.innerText = '正在初始化引擎...';
-                await initFFmpeg();
-            }
-
             try {
+                if (!ffmpeg) {
+                    statusText.innerText = '正在初始化影片引擎...';
+                    ffmpeg = createFFmpeg({ log: true });
+                    await ffmpeg.load();
+                }
+
                 const total = input.files.length;
 
                 for (let i = 0; i < total; i++) {
                     const file = input.files[i];
-                    const inputName = `input_${i}_${file.name}`;
+                    const inputName = `input_${i}.${file.name.split('.').pop()}`;
                     const outputName = `output_${i}.${targetExt}`;
 
                     statusText.innerText = `轉換中 (${i + 1}/${total}): ${file.name}`;
@@ -509,7 +489,7 @@
                     if (targetExt === 'gif') {
                         await ffmpeg.run('-i', inputName, '-vf', 'fps=15,scale=480:-1:flags=lanczos', outputName);
                     } else {
-                        await ffmpeg.run('-i', inputName, outputName);
+                        await ffmpeg.run('-i', inputName, '-vcodec', 'libx264', '-crf', '28', '-preset', 'ultrafast', outputName);
                     }
 
                     const data = ffmpeg.FS('readFile', outputName);

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>圖片、影片轉檔工具</title>
+    <title>多媒體轉檔工具</title>
     
     <!-- FontAwesome Icons & Google Fonts -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -14,6 +14,7 @@
     <!-- HEIC2Any Library for iPhone HEIC Decoding -->
     <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
     
+    <!-- FFmpeg v0.11.6 核心套件 -->
     <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
 
     <style>
@@ -453,7 +454,7 @@
                 <i class="fa-solid fa-wand-magic-sparkles"></i>
             </div>
             <div class="logo-title">
-                MediaForge <span class="badge">v3.0</span>
+                MediaForge <span class="badge">PRO v3.0</span>
             </div>
         </div>
         <div id="ffmpeg-status" class="status-badge">
@@ -624,27 +625,21 @@
             }
         }
 
-        // Initialize FFmpeg WASM v0.12 with Blob URLs (Resolves CORS & missing core issues)
+        // Initialize FFmpeg WASM v0.11.6 with stable unpkg source
+        const { createFFmpeg, fetchFile } = FFmpeg;
+
         async function initFFmpeg() {
             const statusEl = document.getElementById('ffmpeg-status');
             try {
-                const { FFmpeg } = FFmpegWASM;
-                const { toBlobURL } = FFmpegUtil;
-
-                ffmpeg = new FFmpeg();
-
-                // FFmpeg 0.12 Single Thread Core Base URL
-                const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd';
-
-                // Load ffmpeg core scripts as Blob URLs to completely eliminate Worker / CORS origin conflicts
-                await ffmpeg.load({
-                    coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-                    wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+                ffmpeg = createFFmpeg({
+                    corePath: 'https://unpkg.com/@ffmpeg/core@0.11.6/dist/ffmpeg-core.js',
+                    log: true
                 });
+                await ffmpeg.load();
 
                 isFFmpegLoaded = true;
                 statusEl.className = "status-badge ready";
-                statusEl.innerHTML = '<i class="fa-solid fa-circle-check"></i><span>影片引擎就緒 (秒開)</span>';
+                statusEl.innerHTML = '<i class="fa-solid fa-circle-check"></i><span>影片引擎就緒</span>';
             } catch (err) {
                 console.error("FFmpeg Load Error:", err);
                 statusEl.className = "status-badge error";
@@ -913,40 +908,35 @@
                 const outputName = `output_${i}.${targetExt}`;
 
                 try {
-                    const { fetchFile } = FFmpegUtil;
-                    await ffmpeg.writeFile(inputName, await fetchFile(item.file));
+                    await ffmpeg.FS('writeFile', inputName, await fetchFile(item.file));
 
                     let startTime = Date.now();
 
-                    // Modern FFmpeg progress handler
-                    ffmpeg.on('progress', ({ progress, time }) => {
-                        let pct = Math.round(progress * 100);
-                        if (pct >= 0 && pct <= 100) {
-                            bar.style.width = pct + '%';
-                        }
-                        if (progress > 0.05 && progress < 1) {
+                    // v0.11.6 progress handler
+                    ffmpeg.setProgress(({ ratio }) => {
+                        let pct = Math.max(0, Math.min(100, Math.round(ratio * 100)));
+                        bar.style.width = pct + '%';
+
+                        if (ratio > 0.05 && ratio < 1) {
                             let elapsed = (Date.now() - startTime) / 1000;
-                            let remaining = Math.round((elapsed / progress) - elapsed);
+                            let remaining = Math.round((elapsed / ratio) - elapsed);
                             timeRemainingText.textContent = `剩餘約 ${remaining} 秒`;
-                        } else {
-                            timeRemainingText.textContent = `運算中...`;
+                        } else if (ratio >= 1) {
+                            timeRemainingText.textContent = `準備下載...`;
                         }
                     });
 
                     // Build ffmpeg commands
-                    let args = ['-i', inputName];
                     if (targetExt === 'gif') {
-                        args.push('-vf', 'fps=12,scale=480:-1:flags=lanczos', outputName);
+                        await ffmpeg.run('-i', inputName, '-vf', 'fps=12,scale=480:-1:flags=lanczos', outputName);
                     } else if (['mp3', 'wav', 'aac'].includes(targetExt)) {
-                        args.push('-vn', outputName);
+                        await ffmpeg.run('-i', inputName, outputName);
                     } else {
-                        args.push(outputName);
+                        await ffmpeg.run('-i', inputName, '-vcodec', 'libx264', '-crf', '28', '-preset', 'ultrafast', outputName);
                     }
 
-                    await ffmpeg.exec(args);
-
                     // Read output file & auto-download
-                    const data = await ffmpeg.readFile(outputName);
+                    const data = ffmpeg.FS('readFile', outputName);
                     const mimeType = getMimeType(targetExt);
                     const resultBlob = new Blob([data.buffer], { type: mimeType });
 
@@ -956,8 +946,8 @@
                     item.status = 'done';
 
                     // Cleanup virtual files
-                    await ffmpeg.deleteFile(inputName);
-                    await ffmpeg.deleteFile(outputName);
+                    ffmpeg.FS('unlink', inputName);
+                    ffmpeg.FS('unlink', outputName);
                 } catch (err) {
                     console.error("Video conversion error:", err);
                     item.status = 'error';

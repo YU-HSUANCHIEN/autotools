@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>多媒體轉檔工具</title>
+    <title>圖片、影片轉檔工具</title>
     
     <!-- FontAwesome Icons & Google Fonts -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -110,22 +110,9 @@
             font-size: 0.75rem;
             padding: 0.35rem 0.85rem;
             border-radius: 30px;
-            background: rgba(245, 158, 11, 0.1);
-            color: #fbbf24;
-            border: 1px solid rgba(245, 158, 11, 0.2);
-            transition: all 0.3s ease;
-        }
-
-        .status-badge.ready {
-            background: rgba(16, 185, 129, 0.1);
-            color: #34d399;
-            border-color: rgba(16, 185, 129, 0.2);
-        }
-
-        .status-badge.error {
-            background: rgba(239, 68, 68, 0.1);
-            color: #f87171;
-            border-color: rgba(239, 68, 68, 0.2);
+            background: rgba(59, 130, 246, 0.1);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.2);
         }
 
         /* Main Layout */
@@ -454,12 +441,12 @@
                 <i class="fa-solid fa-wand-magic-sparkles"></i>
             </div>
             <div class="logo-title">
-                MediaForge <span class="badge">PRO v3.0</span>
+                圖片、影片轉檔工具 <span class="badge">v3.0</span>
             </div>
         </div>
         <div id="ffmpeg-status" class="status-badge">
-            <i class="fa-solid fa-spinner fa-spin"></i>
-            <span>正在背景初始化 FFmpeg...</span>
+            <i class="fa-solid fa-circle-info"></i>
+            <span>引擎將於按下轉檔時載入</span>
         </div>
     </header>
 
@@ -599,7 +586,6 @@
         let imageFiles = [];
         let videoFiles = [];
         let ffmpeg = null;
-        let isFFmpegLoaded = false;
 
         // UI Event Listeners
         document.getElementById('image-quality').addEventListener('input', (e) => {
@@ -625,35 +611,11 @@
             }
         }
 
-        // Initialize FFmpeg WASM v0.11.6 with stable unpkg source
-        const { createFFmpeg, fetchFile } = FFmpeg;
-
-        async function initFFmpeg() {
-            const statusEl = document.getElementById('ffmpeg-status');
-            try {
-                ffmpeg = createFFmpeg({
-                    corePath: 'https://unpkg.com/@ffmpeg/core@0.11.6/dist/ffmpeg-core.js',
-                    log: true
-                });
-                await ffmpeg.load();
-
-                isFFmpegLoaded = true;
-                statusEl.className = "status-badge ready";
-                statusEl.innerHTML = '<i class="fa-solid fa-circle-check"></i><span>影片引擎就緒</span>';
-            } catch (err) {
-                console.error("FFmpeg Load Error:", err);
-                statusEl.className = "status-badge error";
-                statusEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>引擎載入失敗</span>';
-            }
-        }
-
-        // Background Preload on DOM Loaded
+        // Setup File Drag & Drop on DOM Loaded
         window.addEventListener('DOMContentLoaded', () => {
-            initFFmpeg();
             setupDragAndDrop();
         });
 
-        // Setup File Drag & Drop
         function setupDragAndDrop() {
             setupZone('image-dropzone', 'image-file-input', handleImageFiles);
             setupZone('video-dropzone', 'video-file-input', handleVideoFiles);
@@ -768,7 +730,6 @@
                 try {
                     let blobToProcess = item.file;
 
-                    // Decodes HEIC / HEIF
                     if (item.name.toLowerCase().endsWith('.heic') || item.name.toLowerCase().endsWith('.heif')) {
                         const converted = await heic2any({ blob: item.file, toType: 'image/jpeg', quality });
                         blobToProcess = Array.isArray(converted) ? converted[0] : converted;
@@ -776,7 +737,6 @@
 
                     const resultBlob = await convertImageOnCanvas(blobToProcess, targetFormat, quality);
                     
-                    // Download file immediately
                     const baseName = item.name.substring(0, item.name.lastIndexOf('.')) || item.name;
                     downloadBlob(resultBlob, `${baseName}_converted.${ext}`);
                     item.status = 'done';
@@ -791,7 +751,6 @@
             percentText.textContent = '100%';
             statusText.textContent = '所有圖片轉檔完成！';
 
-            // Auto Reset/Clear List upon completion
             setTimeout(() => {
                 clearImageQueue();
                 wrapper.classList.add('hidden');
@@ -825,7 +784,7 @@
             });
         }
 
-        // ================= VIDEO CONVERSION =================
+        // ================= VIDEO CONVERSION (On-Demand 0.11.6 Loader) =================
         function handleVideoFiles(files) {
             for (let f of files) {
                 videoFiles.push({ file: f, name: f.name, size: f.size, status: 'pending', url: null });
@@ -880,10 +839,6 @@
 
         async function startVideoConversion() {
             if (videoFiles.length === 0) return;
-            if (!isFFmpegLoaded) {
-                alert('FFmpeg 影片轉檔引擎尚未準備完成，請稍候...');
-                return;
-            }
 
             const targetExt = document.getElementById('video-format-select').value;
             const wrapper = document.getElementById('video-progress-wrapper');
@@ -891,28 +846,46 @@
             const statusText = document.getElementById('video-progress-text');
             const timeRemainingText = document.getElementById('video-time-remaining');
             const convertBtn = document.getElementById('video-convert-btn');
+            const statusBadge = document.getElementById('ffmpeg-status');
 
             wrapper.classList.remove('hidden');
             convertBtn.disabled = true;
 
-            const total = videoFiles.length;
+            try {
+                // 按下按鈕時才初始化載入 v0.11.6，並指向帶有正確 CORS 支援的 jsDelivr CDN 來源
+                if (!ffmpeg) {
+                    statusText.textContent = '正在初始化 0.11.6 轉檔引擎...';
+                    statusBadge.className = "status-badge";
+                    statusBadge.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>正在載入引擎...</span>';
 
-            for (let i = 0; i < total; i++) {
-                let item = videoFiles[i];
-                item.status = 'converting';
-                renderVideoQueue();
+                    const { createFFmpeg, fetchFile } = FFmpeg;
+                    ffmpeg = createFFmpeg({
+                        corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.6/dist/ffmpeg-core.js',
+                        log: true
+                    });
+                    await ffmpeg.load();
 
-                statusText.textContent = `處理中 (${i + 1}/${total}): ${item.name}`;
+                    statusBadge.className = "status-badge ready";
+                    statusBadge.innerHTML = '<i class="fa-solid fa-circle-check"></i><span>引擎已就緒</span>';
+                }
 
-                const inputName = `input_${i}_${item.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-                const outputName = `output_${i}.${targetExt}`;
+                const { fetchFile } = FFmpeg;
+                const total = videoFiles.length;
 
-                try {
+                for (let i = 0; i < total; i++) {
+                    let item = videoFiles[i];
+                    item.status = 'converting';
+                    renderVideoQueue();
+
+                    statusText.textContent = `處理中 (${i + 1}/${total}): ${item.name}`;
+
+                    const inputName = `input_${i}_${item.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+                    const outputName = `output_${i}.${targetExt}`;
+
                     await ffmpeg.FS('writeFile', inputName, await fetchFile(item.file));
 
                     let startTime = Date.now();
 
-                    // v0.11.6 progress handler
                     ffmpeg.setProgress(({ ratio }) => {
                         let pct = Math.max(0, Math.min(100, Math.round(ratio * 100)));
                         bar.style.width = pct + '%';
@@ -926,7 +899,6 @@
                         }
                     });
 
-                    // Build ffmpeg commands
                     if (targetExt === 'gif') {
                         await ffmpeg.run('-i', inputName, '-vf', 'fps=12,scale=480:-1:flags=lanczos', outputName);
                     } else if (['mp3', 'wav', 'aac'].includes(targetExt)) {
@@ -935,7 +907,6 @@
                         await ffmpeg.run('-i', inputName, '-vcodec', 'libx264', '-crf', '28', '-preset', 'ultrafast', outputName);
                     }
 
-                    // Read output file & auto-download
                     const data = ffmpeg.FS('readFile', outputName);
                     const mimeType = getMimeType(targetExt);
                     const resultBlob = new Blob([data.buffer], { type: mimeType });
@@ -945,27 +916,29 @@
 
                     item.status = 'done';
 
-                    // Cleanup virtual files
                     ffmpeg.FS('unlink', inputName);
                     ffmpeg.FS('unlink', outputName);
-                } catch (err) {
-                    console.error("Video conversion error:", err);
-                    item.status = 'error';
+                    renderVideoQueue();
                 }
-                renderVideoQueue();
-            }
 
-            bar.style.width = '100%';
-            statusText.textContent = '所有影音轉檔完成！';
-            timeRemainingText.textContent = '下載完成';
+                bar.style.width = '100%';
+                statusText.textContent = '所有影音轉檔完成！';
+                timeRemainingText.textContent = '下載完成';
 
-            // Auto Reset/Clear List upon completion
-            setTimeout(() => {
-                clearVideoQueue();
-                wrapper.classList.add('hidden');
-                bar.style.width = '0%';
+                setTimeout(() => {
+                    clearVideoQueue();
+                    wrapper.classList.add('hidden');
+                    bar.style.width = '0%';
+                    convertBtn.disabled = false;
+                }, 1800);
+
+            } catch (err) {
+                console.error("Video conversion error:", err);
+                statusText.textContent = '轉檔過程發生錯誤，請檢查主控台';
+                statusBadge.className = "status-badge error";
+                statusBadge.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>引擎載入錯誤</span>';
                 convertBtn.disabled = false;
-            }, 1800);
+            }
         }
 
         // Helper Utility Functions

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>圖片、影片轉檔工具</title>
+    <title>MediaForge Pro - 萬能多媒體轉檔工具</title>
     
     <!-- FontAwesome Icons & Google Fonts -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -113,6 +113,18 @@
             background: rgba(59, 130, 246, 0.1);
             color: #60a5fa;
             border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        .status-badge.ready {
+            background: rgba(16, 185, 129, 0.1);
+            color: #34d399;
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+
+        .status-badge.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            border-color: rgba(239, 68, 68, 0.2);
         }
 
         /* Main Layout */
@@ -441,12 +453,12 @@
                 <i class="fa-solid fa-wand-magic-sparkles"></i>
             </div>
             <div class="logo-title">
-                圖片、影片轉檔工具 <span class="badge">v3.0</span>
+                MediaForge <span class="badge">PRO v3.0</span>
             </div>
         </div>
         <div id="ffmpeg-status" class="status-badge">
             <i class="fa-solid fa-circle-info"></i>
-            <span>引擎將於按下轉檔時載入</span>
+            <span>點擊轉檔按鈕時自動載入引擎</span>
         </div>
     </header>
 
@@ -852,17 +864,14 @@
             convertBtn.disabled = true;
 
             try {
-                // 按下按鈕時才初始化載入 v0.11.6，並指向帶有正確 CORS 支援的 jsDelivr CDN 來源
+                // 按下按鈕時才初始化載入 v0.11.6（完全不指定有問題的 corePath，讓套件自動採用預設穩定包裝）
                 if (!ffmpeg) {
                     statusText.textContent = '正在初始化 0.11.6 轉檔引擎...';
                     statusBadge.className = "status-badge";
                     statusBadge.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>正在載入引擎...</span>';
 
-                    const { createFFmpeg, fetchFile } = FFmpeg;
-                    ffmpeg = createFFmpeg({
-                        corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.6/dist/ffmpeg-core.js',
-                        log: true
-                    });
+                    const { createFFmpeg } = FFmpeg;
+                    ffmpeg = createFFmpeg({ log: true });
                     await ffmpeg.load();
 
                     statusBadge.className = "status-badge ready";

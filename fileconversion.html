@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>圖片、影片轉檔工具</title>
+    <title>多媒體萬能轉檔工具</title>
     <!-- HEIC 支援庫 -->
     <script src="https://unpkg.com/heic2any@0.0.4/dist/heic2any.min.js"></script>
     <!-- FFmpeg v0.11.6 核心套件 -->
@@ -431,7 +431,7 @@
             alert('所有圖片轉檔並下載完成！');
         }
 
-        // === FFmpeg v0.11.6 影音轉檔引擎 ===
+        // === FFmpeg v0.11.6 影音轉檔引擎 (使用 jsDelivr CDN 避開 CORS 錯誤) ===
         const { createFFmpeg, fetchFile } = FFmpeg;
         let ffmpeg = null;
         let isReady = false;
@@ -440,7 +440,7 @@
             if (ffmpeg) return;
             try {
                 ffmpeg = createFFmpeg({
-                    corePath: 'https://unpkg.com/@ffmpeg/core@0.11.6/dist/ffmpeg-core.js',
+                    corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.6/dist/ffmpeg-core.js',
                     log: true
                 });
                 await ffmpeg.load();

@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoTools 常用工具入口網站</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between selection:bg-sky-100 selection:text-sky-700">
+
+    <!-- Header 頂部導航列 -->
+    <header class="bg-white/90 backdrop-blur-md sticky top-0 z-30 border-b border-slate-200 shadow-sm transition-all">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            
+            <!-- Logo & 標題區 -->
+            <div class="flex items-center space-x-3.5">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-sky-500/20 text-xl font-bold">
+                    <i class="fa-solid fa-toolbox"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-xl font-bold text-slate-900 tracking-tight">AutoTools 常用工具入口網站</h1>
+                        <span class="text-[10px] bg-emerald-50 text-emerald-600 font-semibold px-2 py-0.5 rounded-full border border-emerald-200/60 flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span> 在線服務
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-500">自動化工具整合平台</p>
+                </div>
+            </div>
+
+            <!-- 右側功能按鈕區 -->
+            <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+                <button onclick="openInfoModal('desc')" class="px-3.5 py-2 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-slate-300">
+                    <i class="fa-regular fa-circle-question text-slate-500"></i>
+                    <span>網站說明與更新日誌</span>
+                </button>
+                <button onclick="openModal('author-modal')" class="px-3.5 py-2 text-xs font-medium text-white bg-slate-800 hover:bg-slate-900 rounded-lg shadow-sm transition-colors flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-slate-700">
+                    <i class="fa-solid fa-code text-sky-400"></i>
+                    <span>作者資訊與網站框架</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main 內容主區 -->
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 w-full flex-grow">
+        
+        <!-- 歡迎與公告提示條 -->
+        <div class="bg-gradient-to-r from-sky-500/10 via-indigo-500/5 to-transparent border border-sky-200/80 rounded-2xl p-4 sm:p-5 mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div class="flex items-start sm:items-center gap-3.5">
+                <div class="p-2.5 bg-sky-500 text-white rounded-xl shadow-sm hidden sm:block">
+                    <i class="fa-solid fa-rocket"></i>
+                </div>
+                <div>
+                    <h2 class="text-sm font-semibold text-slate-900">歡迎使用快捷入口！</h2>
+                    <p class="text-xs text-slate-600 mt-0.5">點擊卡片上的「瀏覽簡介」可查看完整使用說明；點擊「直接前往」即可另開新頁使用獨立小工具。</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="openInfoModal('changelog')" class="text-xs text-sky-700 hover:text-sky-800 bg-sky-100/80 hover:bg-sky-200/80 px-3 py-1.5 rounded-lg border border-sky-200 transition-colors flex items-center gap-1 font-medium whitespace-nowrap">
+                    <i class="fa-solid fa-clock-rotate-left text-[11px]"></i>
+                    <span>版本日誌 (v1.2.0)</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 區塊標題與統計 -->
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-cubes text-sky-600 text-lg"></i>
+                <h2 class="text-lg font-bold text-slate-900">獨立工具網站</h2>
+            </div>
+            <span class="text-xs text-slate-500 bg-white border border-slate-200 px-3 py-1 rounded-full font-medium">
+                已收錄 <span id="tool-count" class="text-sky-600 font-bold">4</span> 個網站
+            </span>
+        </div>
+
+        <!-- 卡片網格 (Grid Layout) -->
+        <div id="cards-container" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- 網站卡片將由 JavaScript 動態渲染 -->
+        </div>
+
+    </main>
+
+    <!-- Footer 底部 -->
+    <footer class="bg-white border-t border-slate-200 py-8 text-slate-500 text-xs">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-2">
+                <span class="font-bold text-slate-800">AutoTools Portal</span>
+                <span>•</span>
+                <span>自動化工具入口網站</span>
+            </div>
+            <p>© 2026 版權所有．純前端高效運行．無資料收集</p>
+            <div class="flex items-center gap-4 text-slate-400">
+                <button onclick="openModal('author-modal')" class="hover:text-slate-600 transition-colors">作者資訊</button>
+                <button onclick="openInfoModal('desc')" class="hover:text-slate-600 transition-colors">網站說明</button>
+                <button onclick="openInfoModal('changelog')" class="hover:text-slate-600 transition-colors">更新日誌</button>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ==================== 1. 作者資訊與技術規格 Modal ==================== -->
+    <div id="author-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300">
+        <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-slate-100 transform scale-95 transition-all duration-300 overflow-hidden flex flex-col max-h-[90vh]">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-6 relative">
+                <button onclick="closeModal('author-modal')" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors focus:outline-none">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 rounded-full bg-slate-700 border-2 border-sky-400/50 p-1 flex items-center justify-center text-2xl shadow-inner">
+                        👨‍💻
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-xl font-bold">Yu-Hsuan Chien</h3>
+                            <span class="text-[10px] bg-sky-500/30 text-sky-300 px-2 py-0.5 rounded border border-sky-400/30 font-mono">v1.2.0</span>
+                        </div>
+                        <p class="text-xs text-sky-300 mt-1 font-mono">Frontend & Automation Developer</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6 overflow-y-auto custom-scrollbar space-y-5 text-sm text-slate-600">
+                <!-- 作者簡介 -->
+                <div>
+                    <h4 class="text-xs font-bold uppercase text-slate-400 tracking-wider mb-2">關於作者</h4>
+                    <p class="leading-relaxed text-slate-700">
+                        熱衷於透過程式碼解決日常工作中的重複性任務。專注於打造輕量、無負擔且無須註冊登入即可使用的網頁小工具。
+                    </p>
+                </div>
+
+                <!-- 程式碼語言與技術規格 -->
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-2.5">
+                    <h4 class="text-xs font-bold uppercase text-slate-400 tracking-wider flex items-center justify-between">
+                        <span>使用之程式碼語言與框架</span>
+                        <i class="fa-solid fa-code-branch text-slate-400"></i>
+                    </h4>
+                    <div class="flex flex-wrap gap-2 pt-1">
+                        <span class="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-md text-xs font-medium flex items-center gap-1.5">
+                            <i class="fa-brands fa-html5 text-amber-500"></i> HTML5
+                        </span>
+                        <span class="px-2.5 py-1 bg-sky-50 text-sky-700 border border-sky-200 rounded-md text-xs font-medium flex items-center gap-1.5">
+                            <i class="fa-brands fa-css3-alt text-sky-500"></i> CSS3 / Tailwind CSS
+                        </span>
+                        <span class="px-2.5 py-1 bg-yellow-50 text-yellow-800 border border-yellow-200 rounded-md text-xs font-medium flex items-center gap-1.5">
+                            <i class="fa-brands fa-js text-yellow-600"></i> JavaScript (ES6+)
+                        </span>
+                        <span class="px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-md text-xs font-medium flex items-center gap-1.5">
+                            <i class="fa-solid fa-icons text-indigo-500"></i> FontAwesome
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Gemini AI 輔助開發標示 -->
+                <div class="bg-gradient-to-r from-blue-50/80 via-purple-50/50 to-pink-50/50 p-4 rounded-xl border border-indigo-100/80 relative overflow-hidden">
+                    <div class="flex items-start gap-3">
+                        <div class="p-2 bg-gradient-to-tr from-blue-600 to-purple-600 text-white rounded-lg shadow-sm text-sm">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-900 flex items-center gap-1.5 mb-1">
+                                <span>AI 輔助開發說明</span>
+                                <span class="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent text-[10px] font-extrabold uppercase">Google Gemini</span>
+                            </h4>
+                            <p class="text-xs text-slate-600 leading-relaxed">
+                                本網站之架構設計、Tailwind CSS 排版與 JavaScript 邏輯程式碼採用 **Google Gemini AI** 輔助撰寫與效能最佳化，結合開發者邏輯進行驗證與整合。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 連結區 -->
+                <div>
+                    <h4 class="text-xs font-bold uppercase text-slate-400 tracking-wider mb-2">社群與專案連結</h4>
+                    <div class="grid grid-cols-2 gap-3">
+                        <a href="https://github.com/YU-HSUANCHIEN/autotools" target="_blank" class="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-xl flex items-center gap-3 transition-colors group">
+                            <i class="fa-brands fa-github text-lg text-slate-800 group-hover:scale-110 transition-transform"></i>
+                            <div>
+                                <div class="font-semibold text-slate-900 text-xs">GitHub</div>
+                                <div class="text-[10px] text-slate-400">@yu-hsuanchien</div>
+                            </div>
+                        </a>
+                        <a href="https://yu-hsuanchien.github.io/autotools/" target="_blank" class="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-xl flex items-center gap-3 transition-colors group">
+                            <i class="fa-solid fa-globe text-lg text-sky-600 group-hover:scale-110 transition-transform"></i>
+                            <div>
+                                <div class="font-semibold text-slate-900 text-xs">AutoTools 常用工具入口網站</div>
+                                <div class="text-[10px] text-slate-400">自動化工具總覽</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="bg-slate-50 p-4 border-t border-slate-100 flex items-center justify-between">
+                <span class="text-[11px] text-slate-400 font-mono">最後更新：2026/10</span>
+                <button onclick="closeModal('author-modal')" class="px-4 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg transition-colors">
+                    關閉視窗
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ==================== 2. 網站說明與更新日誌 Modal (帶 Tab 頁籤) ==================== -->
+    <div id="info-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300">
+        <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl border border-slate-100 transform scale-95 transition-all duration-300 overflow-hidden flex flex-col max-h-[90vh]">
+            
+            <!-- Modal Header -->
+            <div class="p-5 border-b border-slate-200/80 bg-slate-50/80 flex items-center justify-between pb-0">
+                <div>
+                    <h3 class="font-bold text-slate-900 text-base mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-book-open text-sky-600"></i>
+                        <span>入口網站資訊</span>
+                    </h3>
+                    
+                    <!-- Tab 頁籤切換按鈕 -->
+                    <div class="flex items-center gap-2">
+                        <button id="tab-btn-desc" onclick="switchInfoTab('desc')" class="px-4 py-2 text-xs font-semibold border-b-2 border-sky-600 text-sky-600 transition-colors flex items-center gap-1.5 focus:outline-none">
+                            <i class="fa-solid fa-circle-info"></i>
+                            <span>📖 網站說明</span>
+                        </button>
+                        <button id="tab-btn-changelog" onclick="switchInfoTab('changelog')" class="px-4 py-2 text-xs font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-1.5 focus:outline-none">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                            <span>📜 更新日誌</span>
+                        </button>
+                    </div>
+                </div>
+
+                <button onclick="closeModal('info-modal')" class="w-8 h-8 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors self-start">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body (Tab 1: 網站說明) -->
+            <div id="tab-content-desc" class="p-6 overflow-y-auto custom-scrollbar space-y-4 text-sm text-slate-600">
+                <div class="space-y-2">
+                    <h4 class="font-semibold text-slate-900 flex items-center gap-2 text-xs uppercase tracking-wide text-sky-600">
+                        <i class="fa-solid fa-shield-halved"></i> 純前端隱私與資安承諾
+                    </h4>
+                    <p class="text-xs leading-relaxed text-slate-600">
+                        本入口網站與所收錄的獨立小工具網頁，大多採用 **純前端技術** 撰寫。當您處理圖片、文件或資料填入時，運算過程皆在您的電腦瀏覽器本機端完成，資料絕不上傳任何第三方伺服器，確保資訊隱私安全。
+                    </p>
+                </div>
+
+                <hr class="border-slate-100">
+
+                <div class="space-y-2">
+                    <h4 class="font-semibold text-slate-900 flex items-center gap-2 text-xs uppercase tracking-wide text-sky-600">
+                        <i class="fa-solid fa-bookmark"></i> 建議使用方式
+                    </h4>
+                    <p class="text-xs leading-relaxed text-slate-600">
+                        您可以將本入口網站新增至瀏覽器的「書籤」或「分頁列」。當日後有影像處理、檔案轉檔、文字辨識或自動化填表需求時，可隨時作為效率快捷通道使用。
+                    </p>
+                </div>
+
+                <div class="p-3.5 bg-amber-50 border border-amber-200/80 rounded-xl text-amber-800 text-xs flex items-start gap-2.5">
+                    <i class="fa-solid fa-lightbulb text-amber-500 mt-0.5 text-sm"></i>
+                    <div>
+                        <span class="font-semibold">快捷鍵小提示：</span>隨時按一下鍵盤上的 <kbd class="px-1.5 py-0.5 bg-white border border-amber-300 rounded text-[10px] shadow-sm font-mono text-slate-700">Esc</kbd> 即可快速關閉任何開啟的提示視窗。
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Body (Tab 2: 更新日誌) -->
+            <div id="tab-content-changelog" class="p-6 overflow-y-auto custom-scrollbar space-y-6 text-sm text-slate-600 hidden">
+                <!-- 時間軸列表 -->
+                <div class="relative border-l-2 border-slate-200 ml-3 space-y-6">
+                    
+                    <!-- Version 1.2.0 -->
+                    <div class="relative pl-6">
+                        <span class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-sky-500 border-2 border-white ring-2 ring-sky-100"></span>
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-slate-900 text-sm">v1.2.0</span>
+                            <span class="text-[10px] bg-emerald-50 text-emerald-600 font-semibold px-2 py-0.5 rounded">最新版本</span>
+                            <span class="text-xs text-slate-400">2026-10-12</span>
+                        </div>
+                        <ul class="mt-2 space-y-1.5 text-xs text-slate-600 list-disc list-inside">
+                            <li>新增多功能「網站說明與更新日誌」分頁 Modal。</li>
+                            <li>作者資訊視窗中新增程式語言規格 (HTML5, Tailwind, JS) 與 **Google Gemini AI** 輔助撰寫說明。</li>
+                            <li>強化手持裝置與大螢幕響應式排版 (Responsive Design)。</li>
+                        </ul>
+                    </div>
+
+                    <!-- Version 1.1.0 -->
+                    <div class="relative pl-6">
+                        <span class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-300 border-2 border-white"></span>
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-slate-800 text-sm">v1.1.0</span>
+                            <span class="text-xs text-slate-400">2026-08-20</span>
+                        </div>
+                        <ul class="mt-2 space-y-1.5 text-xs text-slate-600 list-disc list-inside">
+                            <li>新增獨立小工具「詳細簡介 Modal」彈出視窗。</li>
+                            <li>優化 Hover 卡片動畫與視覺深淺度。</li>
+                        </ul>
+                    </div>
+
+                    <!-- Version 1.0.0 -->
+                    <div class="relative pl-6">
+                        <span class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-300 border-2 border-white"></span>
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-slate-800 text-sm">v1.0.0</span>
+                            <span class="text-xs text-slate-400">2026-05-01</span>
+                        </div>
+                        <ul class="mt-2 space-y-1.5 text-xs text-slate-600 list-disc list-inside">
+                            <li>常用工具入口網站正式上線。</li>
+                            <li>收錄首批三個自動化與圖像處理獨立小工具，及好用網站鴿手。</li>
+                        </ul>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="bg-slate-50 p-4 border-t border-slate-100 flex justify-end">
+                <button onclick="closeModal('info-modal')" class="px-4 py-2 text-xs font-medium text-white bg-sky-600 hover:bg-sky-700 rounded-lg transition-colors">
+                    關閉視窗
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ==================== 3. 動態網站詳細簡介 Modal ==================== -->
+    <div id="site-detail-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300">
+        <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl border border-slate-100 transform scale-95 transition-all duration-300 overflow-hidden flex flex-col max-h-[90vh]">
+            
+            <!-- Modal Dynamic Header -->
+            <div class="p-6 border-b border-slate-100 relative bg-slate-50">
+                <button onclick="closeModal('site-detail-modal')" class="absolute top-4 right-4 w-8 h-8 rounded-full hover:bg-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+
+                <div class="flex items-start gap-4">
+                    <div id="modal-site-icon" class="w-12 h-12 rounded-2xl bg-sky-500 text-white flex items-center justify-center text-2xl shadow-sm flex-shrink-0">
+                        🖼️
+                    </div>
+                    <div class="pr-6">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span id="modal-site-badge" class="text-[10px] font-semibold bg-sky-100 text-sky-700 px-2 py-0.5 rounded">
+                                獨立工具
+                            </span>
+                            <span id="modal-site-author" class="text-[10px] text-slate-400">
+                                作者：Yu-Hsuan
+                            </span>
+                        </div>
+                        <h3 id="modal-site-title" class="text-xl font-bold text-slate-900">
+                            網站名稱載入中...
+                        </h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Dynamic Body -->
+            <div class="p-6 overflow-y-auto custom-scrollbar space-y-5 text-sm text-slate-600">
+                
+                <!-- 簡短描述 -->
+                <div>
+                    <h4 class="text-xs font-bold uppercase text-slate-400 tracking-wider mb-1.5">工具簡介</h4>
+                    <p id="modal-site-desc" class="text-slate-700 leading-relaxed">
+                        詳細簡介載入中...
+                    </p>
+                </div>
+
+                <!-- 主要特點清單 -->
+                <div>
+                    <h4 class="text-xs font-bold uppercase text-slate-400 tracking-wider mb-2">核心特點與功能</h4>
+                    <ul id="modal-site-features" class="space-y-2 text-xs">
+                        <!-- JS 動態插入 <li> -->
+                    </ul>
+                </div>
+
+                <!-- 使用情境 -->
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <h4 class="text-xs font-bold uppercase text-slate-400 tracking-wider mb-1.5">推薦使用情境</h4>
+                    <p id="modal-site-scenario" class="text-xs text-slate-600 leading-relaxed">
+                        使用情境說明...
+                    </p>
+                </div>
+            </div>
+
+            <!-- Modal Dynamic Footer -->
+            <div class="bg-slate-50 p-4 border-t border-slate-100 flex items-center justify-between gap-3">
+                <button onclick="closeModal('site-detail-modal')" class="px-4 py-2 text-xs font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg transition-colors">
+                    返回列表
+                </button>
+                <a id="modal-site-link" href="#" target="_blank" class="px-5 py-2 text-xs font-semibold text-white bg-sky-600 hover:bg-sky-700 rounded-lg shadow-sm transition-colors flex items-center gap-1.5">
+                    <span>前往體驗網站</span>
+                    <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // ==========================================
+        // 1. 四個獨立網站的資料庫 (包含完整說明與資訊)
+        // ==========================================
+        const portalSites = [
+            {
+                id: 'site-1',
+                title: '詐欺小工具',
+                icon: '📅',
+                iconBg: 'bg-purple-50 text-purple-600',
+                badgeColor: 'bg-purple-100 text-purple-700',
+                shortDesc: '智慧交叉比對，自動生成提領一覽表、批量CSV轉換。',
+                author: 'Yu-Hsuan',
+                url: 'https://yu-hsuanchien.github.io/autotools/fraudtools.html',
+                features: [
+                    '智慧交叉比對，進行多筆明細排版，自動生成提領一覽表',
+                    '批量轉換csv檔案，並一鍵匯出Xlsx',
+                    '選取含有csv檔案或含有csv壓縮檔的資料夾，將自動遞層搜尋，並逐筆轉換',
+                ],
+                scenario: '無需額外安裝程式，電腦網頁、手機皆可使用。'
+            },
+            {
+                id: 'site-2',
+                title: '線上檔案壓縮工具箱',
+                icon: '📦',
+                iconBg: 'bg-amber-50 text-amber-600',
+                badgeColor: 'bg-amber-100 text-amber-700',
+                shortDesc: '無需安裝任何程式，在瀏覽器端直接將PDF、圖片與影片全格式批次壓縮，完全在瀏覽器安全運行',
+                author: 'Yu-Hsuan',
+                url: 'https://autotools-seven.vercel.app/diversecompressed.html',
+                features: [
+                    '支援拖曳大量檔案至網頁功能',
+                    '支援一鍵批次壓縮多個PDF、圖片及影片等常用格式',
+                    '離線可用，完全離線運算，速度極快'
+                ],
+                scenario: '當你在公司電腦無權限安裝壓縮軟體，又檔案太大無法燒錄時極度便利。'
+            },
+            {
+                id: 'site-3',
+                title: '照片批次排版工具',
+                icon: '📸',
+                iconBg: 'bg-blue-50 text-blue-600',
+                badgeColor: 'bg-blue-100 text-blue-700',
+                shortDesc: '快速對多張圖片進行縮放、多圖拼接排版。',
+                author: 'Yu-Hsuan',
+                url: 'https://yu-hsuanchien.github.io/autotools/autopicture',
+                features: [
+                    '支援一次拖曳大量照片批次處理',
+                    '支援LINE長截圖智慧分割處理',
+                    '內建 A4 排版與多種排版佈局',
+                    '純前端 Canvas 處理，零隱私洩漏風險'
+                ],
+                scenario: '適用於大量照片需批次整理排版時使用。'
+            },
+            {
+                id: 'site-4',
+                title: '鴿手法規與常用檢索工具',
+                icon: '⚖️',
+                iconBg: 'bg-emerald-50 text-emerald-600',
+                badgeColor: 'bg-emerald-100 text-emerald-700',
+                shortDesc: '專為外勤執法人員設計的法規條文快捷檢索與罰則對照工具。',
+                author: '蔡智楷 C.K.SAI',
+                url: 'https://pigeonhand.tw/',
+                features: [
+                    '支援關鍵字模糊搜尋與法條快速跳轉',
+                    '內建常見交通違規與刑法條文對照表',
+                    '多種實用小程式分享'
+                ],
+                scenario: '適用於外勤人員之輔助工具。'
+            }
+        ];
+
+        // ==========================================
+        // 2. 動態渲染網站卡片
+        // ==========================================
+        function renderCards() {
+            const container = document.getElementById('cards-container');
+            document.getElementById('tool-count').innerText = portalSites.length;
+            
+            container.innerHTML = portalSites.map((site) => `
+                <div class="bg-white border border-slate-200/90 rounded-2xl p-6 hover:border-sky-400 hover:shadow-xl hover:shadow-sky-500/5 transition-all duration-300 flex flex-col justify-between group">
+                    <div>
+                        <!-- 卡片頂部標籤 -->
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="w-12 h-12 rounded-2xl ${site.iconBg} flex items-center justify-center text-2xl group-hover:scale-110 transition-transform shadow-sm">
+                                ${site.icon}
+                            </div>
+                            <div class="flex flex-col items-end gap-1">
+                                <span class="text-[11px] font-medium px-2.5 py-0.5 rounded-full ${site.badgeColor}">
+                                    獨立網站
+                                </span>
+                                <span class="text-[10px] text-slate-400">
+                                    by ${site.author}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- 標題與簡介 -->
+                        <h3 class="font-bold text-slate-900 text-base mb-2 group-hover:text-sky-600 transition-colors">
+                            ${site.title}
+                        </h3>
+                        <p class="text-xs text-slate-500 leading-relaxed mb-6 line-clamp-2">
+                            ${site.shortDesc}
+                        </p>
+                    </div>
+
+                    <!-- 操作按鈕區 -->
+                    <div class="grid grid-cols-2 gap-2.5 pt-4 border-t border-slate-100">
+                        <button onclick="openSiteDetailModal('${site.id}')" class="py-2 px-3 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium rounded-xl border border-slate-200/80 transition-colors flex items-center justify-center gap-1.5 focus:outline-none">
+                            <i class="fa-regular fa-eye text-slate-400"></i>
+                            <span>瀏覽簡介</span>
+                        </button>
+                        <a href="${site.url}" target="_blank" class="py-2 px-3 bg-sky-600 hover:bg-sky-700 text-white text-xs font-medium rounded-xl shadow-sm transition-colors flex items-center justify-center gap-1.5">
+                            <span>直接前往</span>
+                            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                        </a>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ==========================================
+        // 3. Modal 視窗開關 & Tab 切換 logic
+        // ==========================================
+        
+        // 開啟指定的 Modal
+        function openModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (!modal) return;
+
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.classList.add('opacity-100');
+
+            const content = modal.querySelector('div > div');
+            if (content) {
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }
+
+            // 防止背景滾動
+            document.body.style.overflow = 'hidden';
+        }
+
+        // 關閉指定的 Modal
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (!modal) return;
+
+            const content = modal.querySelector('div > div');
+            if (content) {
+                content.classList.remove('scale-100');
+                content.classList.add('scale-95');
+            }
+
+            modal.classList.remove('opacity-100');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+
+            // 恢復背景滾動
+            document.body.style.overflow = '';
+        }
+
+        // 切換「網站說明與更新日誌 Modal」內的 Tab
+        function switchInfoTab(tab) {
+            const btnDesc = document.getElementById('tab-btn-desc');
+            const btnChangelog = document.getElementById('tab-btn-changelog');
+            const contentDesc = document.getElementById('tab-content-desc');
+            const contentChangelog = document.getElementById('tab-content-changelog');
+
+            if (tab === 'desc') {
+                btnDesc.className = "px-4 py-2 text-xs font-semibold border-b-2 border-sky-600 text-sky-600 transition-colors flex items-center gap-1.5 focus:outline-none";
+                btnChangelog.className = "px-4 py-2 text-xs font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-1.5 focus:outline-none";
+                contentDesc.classList.remove('hidden');
+                contentChangelog.classList.add('hidden');
+            } else {
+                btnChangelog.className = "px-4 py-2 text-xs font-semibold border-b-2 border-sky-600 text-sky-600 transition-colors flex items-center gap-1.5 focus:outline-none";
+                btnDesc.className = "px-4 py-2 text-xs font-semibold border-b-2 border-transparent text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-1.5 focus:outline-none";
+                contentChangelog.classList.remove('hidden');
+                contentDesc.classList.add('hidden');
+            }
+        }
+
+        // 開啟網站說明/更新日誌 Modal 並指定開啟哪個 Tab
+        function openInfoModal(defaultTab = 'desc') {
+            switchInfoTab(defaultTab);
+            openModal('info-modal');
+        }
+
+        // 開啟並填入指定網站的詳細簡介 Modal
+        function openSiteDetailModal(siteId) {
+            const site = portalSites.find(s => s.id === siteId);
+            if (!site) return;
+
+            // 填入資料
+            document.getElementById('modal-site-icon').innerText = site.icon;
+            document.getElementById('modal-site-title').innerText = site.title;
+            document.getElementById('modal-site-desc').innerText = site.shortDesc;
+            document.getElementById('modal-site-scenario').innerText = site.scenario;
+            document.getElementById('modal-site-author').innerText = `作者：${site.author}`;
+            document.getElementById('modal-site-link').href = site.url;
+
+            // 渲染特色清單
+            const featuresContainer = document.getElementById('modal-site-features');
+            featuresContainer.innerHTML = site.features.map(f => `
+                <li class="flex items-start gap-2 text-slate-600">
+                    <i class="fa-solid fa-circle-check text-sky-500 mt-0.5 text-xs"></i>
+                    <span>${f}</span>
+                </li>
+            `).join('');
+
+            // 開啟 Modal
+            openModal('site-detail-modal');
+        }
+
+        // 綁定 Modal 點擊遮罩關閉 & 鍵盤 Esc 關閉事件
+        window.addEventListener('DOMContentLoaded', () => {
+            renderCards();
+
+            // 點擊 Modal 外部背景關閉
+            ['author-modal', 'info-modal', 'site-detail-modal'].forEach(id => {
+                const modal = document.getElementById(id);
+                if (modal) {
+                    modal.addEventListener('click', (e) => {
+                        if (e.target === modal) {
+                            closeModal(id);
+                        }
+                    });
+                }
+            });
+
+            // 按鍵 Esc 關閉所有開啟中的 Modal
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    ['author-modal', 'info-modal', 'site-detail-modal'].forEach(id => {
+                        closeModal(id);
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

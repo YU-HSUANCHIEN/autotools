@@ -5,16 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>圖片、影片批量轉檔小工具</title>
     
-    <!-- FontAwesome Icons & Google Fonts -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- HEIC2Any Library for iPhone HEIC Decoding -->
     <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
-    
-    <!-- FFmpeg v0.11.6 核心套件 -->
     <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
 
     <style>
@@ -30,13 +26,7 @@
             --text-muted: #94a3b8;
             --border-radius: 16px;
         }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
             background-color: var(--bg-dark);
@@ -49,12 +39,9 @@
                 radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.12) 0%, transparent 40%),
                 radial-gradient(circle at 85% 85%, rgba(139, 92, 246, 0.1) 0%, transparent 40%);
         }
-
-        /* Minimal Header Style */
         header {
             background: rgba(15, 23, 42, 0.8);
             backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--panel-border);
             padding: 0.75rem 1.5rem;
             display: flex;
@@ -64,418 +51,119 @@
             top: 0;
             z-index: 50;
         }
-
-        .logo-container {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
+        .logo-container { display: flex; align-items: center; gap: 0.75rem; }
         .logo-icon {
-            width: 36px;
-            height: 36px;
+            width: 36px; height: 36px;
             background: linear-gradient(135deg, #6366f1, #8b5cf6);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 0 15px var(--accent-glow);
-            color: white;
-            font-size: 0.9rem;
+            border-radius: 10px; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 15px var(--accent-glow); color: white; font-size: 0.9rem;
         }
-
-        .logo-title {
-            font-size: 1.05rem;
-            font-weight: 700;
-            letter-spacing: -0.02em;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
+        .logo-title { font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; }
         .badge {
-            font-size: 0.65rem;
-            padding: 2px 8px;
-            border-radius: 20px;
-            background: rgba(99, 102, 241, 0.15);
-            color: #818cf8;
-            border: 1px solid rgba(99, 102, 241, 0.3);
-            font-weight: 600;
+            font-size: 0.65rem; padding: 2px 8px; border-radius: 20px;
+            background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); font-weight: 600;
         }
-
         .status-badge {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.75rem;
-            padding: 0.35rem 0.85rem;
-            border-radius: 30px;
-            background: rgba(59, 130, 246, 0.1);
-            color: #60a5fa;
-            border: 1px solid rgba(59, 130, 246, 0.2);
+            display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem;
+            padding: 0.35rem 0.85rem; border-radius: 30px; background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2);
         }
-
-        .status-badge.ready {
-            background: rgba(16, 185, 129, 0.1);
-            color: #34d399;
-            border-color: rgba(16, 185, 129, 0.2);
-        }
-
-        .status-badge.error {
-            background: rgba(239, 68, 68, 0.1);
-            color: #f87171;
-            border-color: rgba(239, 68, 68, 0.2);
-        }
-
-        /* Main Layout */
+        .status-badge.ready { background: rgba(16, 185, 129, 0.1); color: #34d399; border-color: rgba(16, 185, 129, 0.2); }
+        .status-badge.error { background: rgba(239, 68, 68, 0.1); color: #f87171; border-color: rgba(239, 68, 68, 0.2); }
         main {
-            flex: 1;
-            max-width: 900px;
-            width: 100%;
-            margin: 0 auto;
-            padding: 1.5rem 1rem 3rem 1rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1.25rem;
+            flex: 1; max-width: 900px; width: 100%; margin: 0 auto; padding: 1.5rem 1rem 3rem 1rem;
+            display: flex; flex-direction: column; gap: 1.25rem;
         }
-
-        /* Glassmorphic Panel */
         .glass-panel {
-            background: var(--panel-bg);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--panel-border);
-            border-radius: var(--border-radius);
-            padding: 1.25rem;
+            background: var(--panel-bg); backdrop-filter: blur(16px);
+            border: 1px solid var(--panel-border); border-radius: var(--border-radius); padding: 1.25rem;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
         }
-
-        /* Glowing Refined Tabs */
         .tabs-wrapper {
-            display: flex;
-            background: rgba(10, 15, 28, 0.7);
-            padding: 4px;
-            border-radius: 14px;
-            border: 1px solid var(--panel-border);
-            gap: 4px;
+            display: flex; background: rgba(10, 15, 28, 0.7); padding: 4px; border-radius: 14px; border: 1px solid var(--panel-border); gap: 4px;
         }
-
         .tab-btn {
-            flex: 1;
-            padding: 0.65rem 1rem;
-            border: none;
-            background: transparent;
-            color: var(--text-muted);
-            font-size: 0.85rem;
-            font-weight: 600;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
+            flex: 1; padding: 0.65rem 1rem; border: none; background: transparent; color: var(--text-muted);
+            font-size: 0.85rem; font-weight: 600; border-radius: 10px; cursor: pointer; transition: all 0.25s;
+            display: flex; align-items: center; justify-content: center; gap: 0.5rem;
         }
-
-        .tab-btn.active {
-            background: var(--accent);
-            color: white;
-            box-shadow: 0 4px 15px var(--accent-glow);
-        }
-
-        /* Controls Grid */
-        .control-group {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-        }
-
-        .input-label-group {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            flex: 1;
-            min-width: 200px;
-        }
-
-        label {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            white-space: nowrap;
-        }
-
+        .tab-btn.active { background: var(--accent); color: white; box-shadow: 0 4px 15px var(--accent-glow); }
+        .control-group { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; }
+        .input-label-group { display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 200px; }
+        label { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
         select, input[type="range"] {
-            background: rgba(15, 23, 42, 0.8);
-            border: 1px solid var(--panel-border);
-            color: var(--text-main);
-            padding: 0.55rem 0.85rem;
-            border-radius: 10px;
-            font-size: 0.85rem;
-            outline: none;
-            width: 100%;
-            transition: border-color 0.2s;
+            background: rgba(15, 23, 42, 0.8); border: 1px solid var(--panel-border); color: var(--text-main);
+            padding: 0.55rem 0.85rem; border-radius: 10px; font-size: 0.85rem; outline: none; width: 100%;
         }
-
-        select:focus {
-            border-color: var(--accent);
-        }
-
-        /* Drop Zone */
         .drop-zone {
-            border: 2px dashed rgba(255, 255, 255, 0.15);
-            border-radius: 20px;
-            padding: 2.5rem 1.5rem;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            background: rgba(15, 23, 42, 0.3);
+            border: 2px dashed rgba(255, 255, 255, 0.15); border-radius: 20px; padding: 2.5rem 1.5rem; text-align: center;
+            cursor: pointer; transition: all 0.3s ease; background: rgba(15, 23, 42, 0.3);
         }
-
-        .drop-zone:hover, .drop-zone.dragover {
-            border-color: var(--accent);
-            background: rgba(99, 102, 241, 0.05);
-            transform: translateY(-2px);
-        }
-
+        .drop-zone:hover, .drop-zone.dragover { border-color: var(--accent); background: rgba(99, 102, 241, 0.05); }
         .drop-icon {
-            width: 54px;
-            height: 54px;
-            border-radius: 16px;
-            background: rgba(99, 102, 241, 0.1);
-            color: #818cf8;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            margin: 0 auto 1rem auto;
+            width: 54px; height: 54px; border-radius: 16px; background: rgba(99, 102, 241, 0.1); color: #818cf8;
+            display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 1rem auto;
             border: 1px solid rgba(99, 102, 241, 0.2);
-            transition: transform 0.3s;
         }
-
-        .drop-zone:hover .drop-icon {
-            transform: scale(1.1);
-        }
-
-        .drop-title {
-            font-size: 1rem;
-            font-weight: 600;
-            margin-bottom: 0.35rem;
-        }
-
-        .drop-sub {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-        }
-
-        /* Buttons */
+        .drop-title { font-size: 1rem; font-weight: 600; margin-bottom: 0.35rem; }
+        .drop-sub { font-size: 0.75rem; color: var(--text-muted); }
         .btn-primary {
-            background: linear-gradient(135deg, var(--accent), var(--accent-hover));
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 12px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            box-shadow: 0 4px 15px var(--accent-glow);
-            transition: all 0.2s ease;
+            background: linear-gradient(135deg, var(--accent), var(--accent-hover)); color: white; border: none;
+            padding: 0.75rem 1.5rem; border-radius: 12px; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+            display: inline-flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 15px var(--accent-glow);
         }
-
-        .btn-primary:hover:not(:disabled) {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
-        }
-
-        .btn-primary:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-secondary {
-            background: rgba(30, 41, 59, 0.6);
-            color: var(--text-muted);
-            border: 1px solid var(--panel-border);
-            padding: 0.5rem 1rem;
-            border-radius: 10px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
+            background: rgba(30, 41, 59, 0.6); color: var(--text-muted); border: 1px solid var(--panel-border);
+            padding: 0.5rem 1rem; border-radius: 10px; font-size: 0.75rem; font-weight: 600; cursor: pointer;
         }
-
-        .btn-secondary:hover {
-            color: white;
-            background: rgba(51, 65, 85, 0.8);
-        }
-
-        /* Queue List */
-        .queue-container {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-
-        .queue-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 0.25rem;
-        }
-
-        .file-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-            gap: 0.75rem;
-            max-height: 320px;
-            overflow-y: auto;
-            padding-right: 4px;
-        }
-
+        .queue-container { display: flex; flex-direction: column; gap: 0.75rem; }
+        .queue-header { display: flex; align-items: center; justify-content: space-between; padding: 0 0.25rem; }
+        .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.75rem; max-height: 320px; overflow-y: auto; }
         .file-card {
-            background: var(--card-bg);
-            border: 1px solid var(--panel-border);
-            padding: 0.75rem 1rem;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 0.75rem;
+            background: var(--card-bg); border: 1px solid var(--panel-border); padding: 0.75rem 1rem;
+            border-radius: 12px; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
         }
-
-        .file-info {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            overflow: hidden;
-        }
-
+        .file-info { display: flex; align-items: center; gap: 0.75rem; overflow: hidden; }
         .file-icon {
-            width: 34px;
-            height: 34px;
-            border-radius: 8px;
-            background: rgba(15, 23, 42, 0.6);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.85rem;
-            color: #818cf8;
-            flex-shrink: 0;
+            width: 34px; height: 34px; border-radius: 8px; background: rgba(15, 23, 42, 0.6);
+            display: flex; align-items: center; justify-content: center; font-size: 0.85rem; color: #818cf8; flex-shrink: 0;
         }
-
-        .file-details {
-            overflow: hidden;
-        }
-
-        .file-name {
-            font-size: 0.8rem;
-            font-weight: 600;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .file-meta {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-top: 2px;
-        }
-
-        /* Progress Bar */
+        .file-details { overflow: hidden; }
+        .file-name { font-size: 0.8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-meta { font-size: 0.7rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.5rem; margin-top: 2px; }
         .progress-box {
-            background: rgba(10, 15, 28, 0.6);
-            border: 1px solid var(--panel-border);
-            border-radius: 14px;
-            padding: 1rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
+            background: rgba(10, 15, 28, 0.6); border: 1px solid var(--panel-border); border-radius: 14px; padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem;
         }
-
-        .progress-info {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.75rem;
-            color: var(--text-muted);
-        }
-
-        .progress-bar-bg {
-            width: 100%;
-            height: 8px;
-            background: rgba(30, 41, 59, 0.8);
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        .progress-bar-fill {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, #6366f1, #a855f7);
-            border-radius: 10px;
-            transition: width 0.2s ease;
-        }
-
-        /* Dark Scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: rgba(10, 15, 28, 0.5);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(51, 65, 85, 0.8);
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(71, 85, 105, 1);
-        }
-
+        .progress-info { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); }
+        .progress-bar-bg { width: 100%; height: 8px; background: rgba(30, 41, 59, 0.8); border-radius: 10px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #6366f1, #a855f7); border-radius: 10px; transition: width 0.2s ease; }
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-    <!-- Minimal Header -->
     <header>
         <div class="logo-container">
-            <div class="logo-icon">
-                <i class="fa-solid fa-wand-magic-sparkles"></i>
-            </div>
-            <div class="logo-title">
-                圖片、影片批量轉檔工具<span class="badge"> v3.0</span>
-            </div>
+            <div class="logo-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+            <div class="logo-title">圖片、影片批量轉檔工具<span class="badge"> v3.1 最佳化版</span></div>
         </div>
         <div id="ffmpeg-status" class="status-badge">
             <i class="fa-solid fa-circle-info"></i>
-            <span>點擊轉檔按鈕時自動載入引擎</span>
+            <span>點擊轉檔時按需載入引擎</span>
         </div>
     </header>
 
     <main>
-        <!-- Tab Switching Bar -->
         <div class="tabs-wrapper">
             <button onclick="switchTab('image')" id="tab-btn-image" class="tab-btn active">
-                <i class="fa-regular fa-image"></i>
-                <span>圖片批量轉檔</span>
+                <i class="fa-regular fa-image"></i><span>圖片批量轉檔</span>
             </button>
             <button onclick="switchTab('video')" id="tab-btn-video" class="tab-btn">
-                <i class="fa-solid fa-clapperboard"></i>
-                <span>影音批量轉檔</span>
+                <i class="fa-solid fa-clapperboard"></i><span>影音批量轉檔</span>
             </button>
         </div>
 
-        <!-- ================= IMAGE TAB ================= -->
+        <!-- 圖片轉檔面板 -->
         <div id="tab-image" class="glass-panel" style="display: flex; flex-direction: column; gap: 1.25rem;">
             <div class="control-group">
                 <div class="input-label-group">
@@ -484,7 +172,7 @@
                         <option value="image/jpeg">JPG / JPEG</option>
                         <option value="image/png" selected>PNG</option>
                         <option value="image/webp">WebP</option>
-                        <option value="image/avif">AVIF (高壓縮比)</option>
+                        <option value="image/avif">AVIF</option>
                         <option value="image/bmp">BMP</option>
                         <option value="image/gif">GIF</option>
                     </select>
@@ -497,11 +185,9 @@
 
             <div id="image-dropzone" class="drop-zone" onclick="document.getElementById('image-file-input').click()">
                 <input type="file" id="image-file-input" multiple accept="image/*,.heic,.heif" class="hidden">
-                <div class="drop-icon">
-                    <i class="fa-solid fa-cloud-arrow-up"></i>
-                </div>
+                <div class="drop-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
                 <div class="drop-title">點擊選擇圖片，或將檔案拖曳至此</div>
-                <div class="drop-sub">支援 JPG, PNG, WebP, GIF, BMP, AVIF 及 iPhone 的 HEIC / HEIF 格式</div>
+                <div class="drop-sub">支援 JPG, PNG, WebP, GIF, BMP, AVIF 及 HEIC / HEIF 格式</div>
             </div>
 
             <div id="image-queue-container" class="queue-container hidden">
@@ -522,47 +208,35 @@
                         <span id="image-progress-text">準備轉檔...</span>
                         <span id="image-progress-percent" style="font-family: monospace;">0%</span>
                     </div>
-                    <div class="progress-bar-bg">
-                        <div id="image-progress-bar" class="progress-bar-fill"></div>
-                    </div>
+                    <div class="progress-bar-bg"><div id="image-progress-bar" class="progress-bar-fill"></div></div>
                 </div>
 
                 <div id="image-list" class="file-grid"></div>
             </div>
         </div>
 
-        <!-- ================= VIDEO TAB ================= -->
+        <!-- 影音轉檔面板 -->
         <div id="tab-video" class="glass-panel hidden" style="display: flex; flex-direction: column; gap: 1.25rem;">
             <div class="control-group">
                 <div class="input-label-group">
                     <label for="video-format-select">目標格式：</label>
                     <select id="video-format-select">
-                        <optgroup label="主流影片格式">
-                            <option value="mp4" selected>MP4 (.mp4)</option>
-                            <option value="webm">WebM (.webm)</option>
-                            <option value="mkv">MKV (.mkv)</option>
-                            <option value="avi">AVI (.avi)</option>
-                            <option value="mov">MOV (.mov)</option>
-                            <option value="flv">FLV (.flv)</option>
-                            <option value="wmv">WMV (.wmv)</option>
-                        </optgroup>
-                        <optgroup label="動畫與純音訊">
-                            <option value="gif">動態 GIF (.gif)</option>
-                            <option value="mp3">提取音訊 MP3 (.mp3)</option>
-                            <option value="wav">提取音訊 WAV (.wav)</option>
-                            <option value="aac">提取音訊 AAC (.aac)</option>
-                        </optgroup>
+                        <option value="mp4" selected>MP4 (.mp4)</option>
+                        <option value="webm">WebM (.webm)</option>
+                        <option value="mkv">MKV (.mkv)</option>
+                        <option value="avi">AVI (.avi)</option>
+                        <option value="mov">MOV (.mov)</option>
+                        <option value="gif">動態 GIF (.gif)</option>
+                        <option value="mp3">提取音訊 MP3 (.mp3)</option>
                     </select>
                 </div>
             </div>
 
             <div id="video-dropzone" class="drop-zone" onclick="document.getElementById('video-file-input').click()">
                 <input type="file" id="video-file-input" multiple accept="video/*,audio/*" class="hidden">
-                <div class="drop-icon">
-                    <i class="fa-solid fa-file-video"></i>
-                </div>
+                <div class="drop-icon"><i class="fa-solid fa-file-video"></i></div>
                 <div class="drop-title">點擊選擇影音檔，或將檔案拖曳至此</div>
-                <div class="drop-sub">支援 MP4, MKV, MOV, AVI, WebM, MP3, WAV 等主流多媒體格式</div>
+                <div class="drop-sub">支援 MP4, MKV, MOV, AVI, WebM, MP3 等格式</div>
             </div>
 
             <div id="video-queue-container" class="queue-container hidden">
@@ -581,11 +255,9 @@
                 <div id="video-progress-wrapper" class="progress-box hidden">
                     <div class="progress-info">
                         <span id="video-progress-text">準備轉檔...</span>
-                        <span id="video-time-remaining" style="color: #818cf8;">計算剩餘時間...</span>
+                        <span id="video-time-remaining" style="color: #818cf8;">等待中...</span>
                     </div>
-                    <div class="progress-bar-bg">
-                        <div id="video-progress-bar" class="progress-bar-fill"></div>
-                    </div>
+                    <div class="progress-bar-bg"><div id="video-progress-bar" class="progress-bar-fill"></div></div>
                 </div>
 
                 <div id="video-list" class="file-grid"></div>
@@ -594,12 +266,10 @@
     </main>
 
     <script>
-        // Global variables & state
         let imageFiles = [];
         let videoFiles = [];
         let ffmpeg = null;
 
-        // UI Event Listeners
         document.getElementById('image-quality').addEventListener('input', (e) => {
             document.getElementById('quality-val').textContent = Math.round(e.target.value * 100) + '%';
         });
@@ -623,380 +293,174 @@
             }
         }
 
-        // Setup File Drag & Drop on DOM Loaded
         window.addEventListener('DOMContentLoaded', () => {
-            setupDragAndDrop();
+            setupZone('image-dropzone', 'image-file-input', (files) => {
+                for (let f of files) imageFiles.push({ file: f, name: f.name, size: f.size, status: 'pending' });
+                renderImageQueue();
+            });
+            setupZone('video-dropzone', 'video-file-input', (files) => {
+                for (let f of files) videoFiles.push({ file: f, name: f.name, size: f.size, status: 'pending' });
+                renderVideoQueue();
+            });
         });
-
-        function setupDragAndDrop() {
-            setupZone('image-dropzone', 'image-file-input', handleImageFiles);
-            setupZone('video-dropzone', 'video-file-input', handleVideoFiles);
-        }
 
         function setupZone(zoneId, inputId, handler) {
             const zone = document.getElementById(zoneId);
             const input = document.getElementById(inputId);
-
-            ['dragenter', 'dragover'].forEach(name => {
-                zone.addEventListener(name, (e) => { e.preventDefault(); zone.classList.add('dragover'); });
-            });
-
-            ['dragleave', 'drop'].forEach(name => {
-                zone.addEventListener(name, (e) => { e.preventDefault(); zone.classList.remove('dragover'); });
-            });
-
-            zone.addEventListener('drop', (e) => {
-                if (e.dataTransfer.files && e.dataTransfer.files.length) {
-                    handler(e.dataTransfer.files);
-                }
-            });
-
-            input.addEventListener('change', (e) => {
-                if (e.target.files && e.target.files.length) {
-                    handler(e.target.files);
-                }
-            });
-        }
-
-        // ================= IMAGE CONVERSION =================
-        function handleImageFiles(files) {
-            for (let f of files) {
-                imageFiles.push({ file: f, name: f.name, size: f.size, status: 'pending', url: null });
-            }
-            renderImageQueue();
+            ['dragenter', 'dragover'].forEach(n => zone.addEventListener(n, e => { e.preventDefault(); zone.classList.add('dragover'); }));
+            ['dragleave', 'drop'].forEach(n => zone.addEventListener(n, e => { e.preventDefault(); zone.classList.remove('dragover'); }));
+            zone.addEventListener('drop', e => { if (e.dataTransfer.files?.length) handler(e.dataTransfer.files); });
+            input.addEventListener('change', e => { if (e.target.files?.length) handler(e.target.files); });
         }
 
         function renderImageQueue() {
             const container = document.getElementById('image-queue-container');
             const listEl = document.getElementById('image-list');
-            const badge = document.getElementById('image-count-badge');
-
-            if (imageFiles.length === 0) {
-                container.classList.add('hidden');
-                return;
-            }
-
+            document.getElementById('image-count-badge').textContent = imageFiles.length;
+            if (!imageFiles.length) { container.classList.add('hidden'); return; }
             container.classList.remove('hidden');
-            badge.textContent = imageFiles.length;
-            listEl.innerHTML = '';
-
-            imageFiles.forEach((item, index) => {
-                const card = document.createElement('div');
-                card.className = 'file-card';
-                card.innerHTML = `
+            listEl.innerHTML = imageFiles.map((item, idx) => `
+                <div class="file-card">
                     <div class="file-info">
                         <div class="file-icon"><i class="fa-regular fa-image"></i></div>
                         <div class="file-details">
-                            <div class="file-name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
-                            <div class="file-meta">
-                                <span>${formatBytes(item.size)}</span>
-                                <span style="color: ${getStatusColor(item.status)};">${getStatusText(item.status)}</span>
-                            </div>
+                            <div class="file-name">${item.name}</div>
+                            <div class="file-meta"><span>${(item.size/1024/1024).toFixed(1)} MB</span></div>
                         </div>
                     </div>
-                    <button onclick="removeImageFile(${index})" class="btn-secondary" style="padding: 0.35rem 0.6rem;"><i class="fa-solid fa-xmark"></i></button>
-                `;
-                listEl.appendChild(card);
-            });
+                    <button onclick="imageFiles.splice(${idx},1);renderImageQueue();" class="btn-secondary" style="padding:0.35rem 0.6rem;"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            `).join('');
         }
 
-        function removeImageFile(idx) {
-            imageFiles.splice(idx, 1);
-            renderImageQueue();
-        }
-
-        function clearImageQueue() {
-            imageFiles = [];
-            document.getElementById('image-file-input').value = '';
-            renderImageQueue();
-        }
+        function clearImageQueue() { imageFiles = []; document.getElementById('image-file-input').value = ''; renderImageQueue(); }
 
         async function startImageConversion() {
-            if (imageFiles.length === 0) return;
-
+            if (!imageFiles.length) return;
             const targetFormat = document.getElementById('image-format-select').value;
             const quality = parseFloat(document.getElementById('image-quality').value);
             const wrapper = document.getElementById('image-progress-wrapper');
             const bar = document.getElementById('image-progress-bar');
-            const percentText = document.getElementById('image-progress-percent');
-            const statusText = document.getElementById('image-progress-text');
-            const convertBtn = document.getElementById('image-convert-btn');
-
             wrapper.classList.remove('hidden');
-            convertBtn.disabled = true;
 
-            const total = imageFiles.length;
-            const extMap = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/avif': 'avif', 'image/bmp': 'bmp', 'image/gif': 'gif' };
-            const ext = extMap[targetFormat] || 'png';
-
-            for (let i = 0; i < total; i++) {
+            for (let i = 0; i < imageFiles.length; i++) {
                 let item = imageFiles[i];
-                item.status = 'converting';
-                renderImageQueue();
-
-                statusText.textContent = `轉檔中 (${i + 1}/${total}): ${item.name}`;
-                let pct = Math.round((i / total) * 100);
-                bar.style.width = pct + '%';
-                percentText.textContent = pct + '%';
-
+                bar.style.width = Math.round(((i+1)/imageFiles.length)*100) + '%';
                 try {
-                    let blobToProcess = item.file;
-
-                    if (item.name.toLowerCase().endsWith('.heic') || item.name.toLowerCase().endsWith('.heif')) {
-                        const converted = await heic2any({ blob: item.file, toType: 'image/jpeg', quality });
-                        blobToProcess = Array.isArray(converted) ? converted[0] : converted;
+                    let blob = item.file;
+                    if (item.name.toLowerCase().endsWith('.heic')) {
+                        const conv = await heic2any({ blob: item.file, toType: 'image/jpeg', quality });
+                        blob = Array.isArray(conv) ? conv[0] : conv;
                     }
-
-                    const resultBlob = await convertImageOnCanvas(blobToProcess, targetFormat, quality);
-                    
-                    const baseName = item.name.substring(0, item.name.lastIndexOf('.')) || item.name;
-                    downloadBlob(resultBlob, `${baseName}_converted.${ext}`);
-                    item.status = 'done';
-                } catch (err) {
-                    console.error("Image conversion error:", err);
-                    item.status = 'error';
-                }
-                renderImageQueue();
+                    const resBlob = await new Promise((res, rej) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = img.width; canvas.height = img.height;
+                            const ctx = canvas.getContext('2d');
+                            if (targetFormat === 'image/jpeg') { ctx.fillStyle = '#fff'; ctx.fillRect(0,0,canvas.width,canvas.height); }
+                            ctx.drawImage(img, 0, 0);
+                            canvas.toBlob(b => b ? res(b) : rej(), targetFormat, quality);
+                        };
+                        img.onerror = rej;
+                        img.src = URL.createObjectURL(blob);
+                    });
+                    const ext = targetFormat.split('/')[1];
+                    downloadBlob(resBlob, `${item.name.substring(0, item.name.lastIndexOf('.'))}_converted.${ext}`);
+                } catch(e) { console.error(e); }
             }
-
-            bar.style.width = '100%';
-            percentText.textContent = '100%';
-            statusText.textContent = '所有圖片轉檔完成！';
-
-            setTimeout(() => {
-                clearImageQueue();
-                wrapper.classList.add('hidden');
-                bar.style.width = '0%';
-                convertBtn.disabled = false;
-            }, 1800);
-        }
-
-        function convertImageOnCanvas(blob, mimeType, quality) {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    const ctx = canvas.getContext('2d');
-
-                    if (mimeType === 'image/jpeg' || mimeType === 'image/bmp') {
-                        ctx.fillStyle = '#FFFFFF';
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    }
-
-                    ctx.drawImage(img, 0, 0);
-                    canvas.toBlob((res) => {
-                        if (res) resolve(res);
-                        else reject(new Error('Canvas export failed'));
-                    }, mimeType, quality);
-                };
-                img.onerror = reject;
-                img.src = URL.createObjectURL(blob);
-            });
-        }
-
-        // ================= VIDEO CONVERSION (On-Demand 0.11.6 Loader) =================
-        function handleVideoFiles(files) {
-            for (let f of files) {
-                videoFiles.push({ file: f, name: f.name, size: f.size, status: 'pending', url: null });
-            }
-            renderVideoQueue();
+            setTimeout(() => { clearImageQueue(); wrapper.classList.add('hidden'); }, 1500);
         }
 
         function renderVideoQueue() {
             const container = document.getElementById('video-queue-container');
             const listEl = document.getElementById('video-list');
-            const badge = document.getElementById('video-count-badge');
-
-            if (videoFiles.length === 0) {
-                container.classList.add('hidden');
-                return;
-            }
-
+            document.getElementById('video-count-badge').textContent = videoFiles.length;
+            if (!videoFiles.length) { container.classList.add('hidden'); return; }
             container.classList.remove('hidden');
-            badge.textContent = videoFiles.length;
-            listEl.innerHTML = '';
-
-            videoFiles.forEach((item, index) => {
-                const card = document.createElement('div');
-                card.className = 'file-card';
-                card.innerHTML = `
+            listEl.innerHTML = videoFiles.map((item, idx) => `
+                <div class="file-card">
                     <div class="file-info">
                         <div class="file-icon"><i class="fa-solid fa-clapperboard"></i></div>
                         <div class="file-details">
-                            <div class="file-name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
-                            <div class="file-meta">
-                                <span>${formatBytes(item.size)}</span>
-                                <span style="color: ${getStatusColor(item.status)};">${getStatusText(item.status)}</span>
-                            </div>
+                            <div class="file-name">${item.name}</div>
+                            <div class="file-meta"><span>${(item.size/1024/1024).toFixed(1)} MB</span></div>
                         </div>
                     </div>
-                    <button onclick="removeVideoFile(${index})" class="btn-secondary" style="padding: 0.35rem 0.6rem;"><i class="fa-solid fa-xmark"></i></button>
-                `;
-                listEl.appendChild(card);
-            });
+                    <button onclick="videoFiles.splice(${idx},1);renderVideoQueue();" class="btn-secondary" style="padding:0.35rem 0.6rem;"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            `).join('');
         }
 
-        function removeVideoFile(idx) {
-            videoFiles.splice(idx, 1);
-            renderVideoQueue();
-        }
+        function clearVideoQueue() { videoFiles = []; document.getElementById('video-file-input').value = ''; renderVideoQueue(); }
 
-        function clearVideoQueue() {
-            videoFiles = [];
-            document.getElementById('video-file-input').value = '';
-            renderVideoQueue();
-        }
-
+        // 按需載入核心，解決網頁卡死問題
         async function startVideoConversion() {
-            if (videoFiles.length === 0) return;
-
+            if (!videoFiles.length) return;
             const targetExt = document.getElementById('video-format-select').value;
             const wrapper = document.getElementById('video-progress-wrapper');
             const bar = document.getElementById('video-progress-bar');
             const statusText = document.getElementById('video-progress-text');
-            const timeRemainingText = document.getElementById('video-time-remaining');
-            const convertBtn = document.getElementById('video-convert-btn');
             const statusBadge = document.getElementById('ffmpeg-status');
-
             wrapper.classList.remove('hidden');
-            convertBtn.disabled = true;
 
             try {
-                // 按下按鈕時才初始化載入 v0.11.6（完全不指定有問題的 corePath，讓套件自動採用預設穩定包裝）
                 if (!ffmpeg) {
-                    statusText.textContent = '正在初始化 0.11.6 轉檔引擎...';
+                    statusText.textContent = '正在按需載入轉檔引擎...';
                     statusBadge.className = "status-badge";
-                    statusBadge.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>正在載入引擎...</span>';
-
+                    statusBadge.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>載入中...</span>';
+                    
                     const { createFFmpeg } = FFmpeg;
                     ffmpeg = createFFmpeg({ log: true });
                     await ffmpeg.load();
 
                     statusBadge.className = "status-badge ready";
-                    statusBadge.innerHTML = '<i class="fa-solid fa-circle-check"></i><span>引擎已就緒</span>';
+                    statusBadge.innerHTML = '<i class="fa-solid fa-circle-check"></i><span>引擎就緒</span>';
                 }
 
-                const { fetchFile } = FFmpeg;
-                const total = videoFiles.length;
-
-                for (let i = 0; i < total; i++) {
+                for (let i = 0; i < videoFiles.length; i++) {
                     let item = videoFiles[i];
-                    item.status = 'converting';
-                    renderVideoQueue();
+                    statusText.textContent = `轉檔中 (${i+1}/${videoFiles.length}): ${item.name}`;
+                    
+                    const inputName = `in_${i}`;
+                    const outputName = `out_${i}.${targetExt}`;
 
-                    statusText.textContent = `處理中 (${i + 1}/${total}): ${item.name}`;
-
-                    const inputName = `input_${i}_${item.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-                    const outputName = `output_${i}.${targetExt}`;
-
-                    await ffmpeg.FS('writeFile', inputName, await fetchFile(item.file));
-
-                    let startTime = Date.now();
-
+                    ffmpeg.FS('writeFile', inputName, await FFmpeg.fetchFile(item.file));
+                    
                     ffmpeg.setProgress(({ ratio }) => {
-                        let pct = Math.max(0, Math.min(100, Math.round(ratio * 100)));
-                        bar.style.width = pct + '%';
-
-                        if (ratio > 0.05 && ratio < 1) {
-                            let elapsed = (Date.now() - startTime) / 1000;
-                            let remaining = Math.round((elapsed / ratio) - elapsed);
-                            timeRemainingText.textContent = `剩餘約 ${remaining} 秒`;
-                        } else if (ratio >= 1) {
-                            timeRemainingText.textContent = `準備下載...`;
-                        }
+                        bar.style.width = Math.round(ratio * 100) + '%';
                     });
 
                     if (targetExt === 'gif') {
-                        await ffmpeg.run('-i', inputName, '-vf', 'fps=12,scale=480:-1:flags=lanczos', outputName);
-                    } else if (['mp3', 'wav', 'aac'].includes(targetExt)) {
+                        await ffmpeg.run('-i', inputName, '-vf', 'fps=10,scale=320:-1', outputName);
+                    } else if (targetExt === 'mp3') {
                         await ffmpeg.run('-i', inputName, outputName);
                     } else {
                         await ffmpeg.run('-i', inputName, '-vcodec', 'libx264', '-crf', '28', '-preset', 'ultrafast', outputName);
                     }
 
                     const data = ffmpeg.FS('readFile', outputName);
-                    const mimeType = getMimeType(targetExt);
-                    const resultBlob = new Blob([data.buffer], { type: mimeType });
-
-                    const baseName = item.name.substring(0, item.name.lastIndexOf('.')) || item.name;
-                    downloadBlob(resultBlob, `${baseName}_converted.${targetExt}`);
-
-                    item.status = 'done';
+                    downloadBlob(new Blob([data.buffer]), `${item.name.substring(0, item.name.lastIndexOf('.'))}_converted.${targetExt}`);
 
                     ffmpeg.FS('unlink', inputName);
                     ffmpeg.FS('unlink', outputName);
-                    renderVideoQueue();
                 }
 
-                bar.style.width = '100%';
                 statusText.textContent = '所有影音轉檔完成！';
-                timeRemainingText.textContent = '下載完成';
-
-                setTimeout(() => {
-                    clearVideoQueue();
-                    wrapper.classList.add('hidden');
-                    bar.style.width = '0%';
-                    convertBtn.disabled = false;
-                }, 1800);
-
+                setTimeout(() => { clearVideoQueue(); wrapper.classList.add('hidden'); }, 1500);
             } catch (err) {
-                console.error("Video conversion error:", err);
-                statusText.textContent = '轉檔過程發生錯誤，請檢查主控台';
+                console.error(err);
+                statusText.textContent = '轉檔發生錯誤';
                 statusBadge.className = "status-badge error";
-                statusBadge.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>引擎載入錯誤</span>';
-                convertBtn.disabled = false;
+                statusBadge.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i><span>載入失敗</span>';
             }
         }
 
-        // Helper Utility Functions
         function downloadBlob(blob, filename) {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            a.click();
+            a.href = url; a.download = filename; a.click();
             setTimeout(() => URL.revokeObjectURL(url), 5000);
-        }
-
-        function formatBytes(bytes) {
-            if (bytes === 0) return '0 B';
-            const k = 1024;
-            const sizes = ['B', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-        }
-
-        function escapeHtml(str) {
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-        }
-
-        function getStatusColor(status) {
-            switch (status) {
-                case 'converting': return '#818cf8';
-                case 'done': return '#34d399';
-                case 'error': return '#f87171';
-                default: return 'var(--text-muted)';
-            }
-        }
-
-        function getStatusText(status) {
-            switch (status) {
-                case 'converting': return '處理中...';
-                case 'done': return '完成';
-                case 'error': return '失敗';
-                default: return '等待中';
-            }
-        }
-
-        function getMimeType(ext) {
-            const map = {
-                'mp4': 'video/mp4', 'webm': 'video/webm', 'mkv': 'video/x-matroska',
-                'avi': 'video/x-msvideo', 'mov': 'video/quicktime', 'gif': 'image/gif',
-                'mp3': 'audio/mpeg', 'wav': 'audio/wav', 'aac': 'audio/aac'
-            };
-            return map[ext] || 'application/octet-stream';
         }
     </script>
 </body>

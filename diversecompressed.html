@@ -42,7 +42,6 @@
         .status { margin-top: 15px; font-weight: bold; color: #007bff; }
         select { padding: 5px; border-radius: 4px; border: 1px solid #ccc; }
 
-        /* 通用進度條與預估時間樣式 */
         .progress-container {
             width: 100%;
             background-color: #e9ecef;
@@ -77,14 +76,13 @@
     <h2>🛠️ 極致壓縮工具箱</h2>
     <p style="color: #666; margin-bottom: 25px;">PDF、圖片與影片全格式批次壓縮，完全在瀏覽器安全運行</p>
 
-    <!-- 標籤切換按鈕 -->
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('pdf')">📄 PDF 批次壓縮</button>
         <button class="tab-btn" onclick="switchTab('image')">🖼️ 圖片批次壓縮 (支援 HEIC)</button>
         <button class="tab-btn" onclick="switchTab('video')">🎬 影片批次壓縮</button>
     </div>
 
-    <!-- ==================== PDF 壓縮面板 ==================== -->
+    <!-- PDF 壓縮面板 -->
     <div id="panel-pdf" class="panel active">
         <h3>PDF 檔案批次極致壓縮</h3>
         <div class="box" id="dropZonePdf" onclick="document.getElementById('filePdf').click()">
@@ -108,7 +106,7 @@
         <div class="status" id="statusPdf"></div>
     </div>
 
-    <!-- ==================== 圖片壓縮面板 ==================== -->
+    <!-- 圖片壓縮面板 -->
     <div id="panel-image" class="panel">
         <h3>圖片批次極致壓縮 (支援 JPG, PNG, WebP, HEIC 等)</h3>
         <div class="box" id="dropZoneImg" onclick="document.getElementById('fileImg').click()">
@@ -132,7 +130,7 @@
         <div class="status" id="statusImg"></div>
     </div>
 
-    <!-- ==================== 影片壓縮面板 ==================== -->
+    <!-- 影片壓縮面板 -->
     <div id="panel-video" class="panel">
         <h3>影片批次壓縮 (支援多格式，維持原格式輸出)</h3>
         <div class="box" id="dropZoneVid" onclick="document.getElementById('fileVid').click()">
@@ -153,7 +151,7 @@
             <div class="progress-bar" id="progressBarVid">0%</div>
         </div>
         <div class="time-estimate" id="timeEstimateVid"></div>
-        <div class="status" id="statusVid">點擊後開始處理</div>
+        <div class="status" id="statusVid">點擊按鈕後將自動載入核心並開始處理</div>
     </div>
 
     <script>
@@ -226,7 +224,6 @@
             }
         });
 
-        // 1. PDF 批次壓縮
         async function compressPDFs() {
             if (filesPdf.length === 0) return;
             const status = document.getElementById('statusPdf');
@@ -247,15 +244,6 @@
                 let percent = Math.round(ratio * 100);
                 progressBar.style.width = percent + '%';
                 progressBar.innerText = percent + '%';
-
-                if (idx > 0) {
-                    let elapsedTime = (Date.now() - startTime) / 1000;
-                    let estimatedTotal = elapsedTime / ratio;
-                    let remaining = Math.round(estimatedTotal - elapsedTime);
-                    let mins = Math.floor(remaining / 60);
-                    let secs = remaining % 60;
-                    timeEstimate.innerText = `⏳ 預估剩餘時間：${mins > 0 ? mins + '分 ' : ''}${secs}秒`;
-                }
 
                 try {
                     const arrayBuffer = await filePdf.arrayBuffer();
@@ -291,7 +279,6 @@
             document.getElementById('btnPdf').disabled = true;
         }
 
-        // 2. 圖片批次壓縮 (支援 HEIC 自動解碼轉換)
         async function compressImages() {
             if (filesImg.length === 0) return;
             const status = document.getElementById('statusImg');
@@ -313,25 +300,10 @@
                 progressBar.style.width = percent + '%';
                 progressBar.innerText = percent + '%';
 
-                if (idx > 0) {
-                    let elapsedTime = (Date.now() - startTime) / 1000;
-                    let estimatedTotal = elapsedTime / (ratio || 0.01);
-                    let remaining = Math.round(estimatedTotal - elapsedTime);
-                    let mins = Math.floor(remaining / 60);
-                    let secs = remaining % 60;
-                    timeEstimate.innerText = `⏳ 預估剩餘時間：${mins > 0 ? mins + '分 ' : ''}${secs}秒`;
-                }
-
                 try {
-                    // 如果是 HEIC 格式，先透過 heic2any 轉為標準 blob
                     if (fileImg.name.toLowerCase().endsWith('.heic') || fileImg.type === 'image/heic') {
                         status.innerText = `正在解碼 HEIC 圖片：${fileImg.name}`;
-                        const convertedBlob = await heic2any({
-                            blob: fileImg,
-                            toType: "image/jpeg",
-                            quality: 0.8
-                        });
-                        // heic2any 可能回傳陣列，取第一個
+                        const convertedBlob = await heic2any({ blob: fileImg, toType: "image/jpeg", quality: 0.8 });
                         fileImg = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
                     }
 
@@ -354,15 +326,11 @@
                                     resolve();
                                 }, 'image/jpeg', quality);
                             };
-                            img.onerror = () => {
-                                console.error('圖片載入失敗: ' + filesImg[idx].name);
-                                resolve();
-                            };
+                            img.onerror = () => resolve();
                         };
                     });
                 } catch (err) {
-                    console.error('HEIC 轉碼失敗：', err);
-                    status.innerText = `⚠️ 圖片 ${fileImg.name} 轉碼失敗，已跳過`;
+                    console.error('圖片處理失敗：', err);
                 }
             }
 
@@ -377,7 +345,7 @@
             document.getElementById('btnImg').disabled = true;
         }
 
-        // 3. 影片批次壓縮
+        // 隨需載入 (Lazy Load) FFmpeg 核心引擎
         let ffmpegInstance = null;
         async function compressVideosFFmpeg() {
             if (filesVid.length === 0) return;
@@ -391,8 +359,8 @@
 
             try {
                 if (!ffmpegInstance) {
-                    status.innerText = '正在初始化影片轉碼核心...';
-                    const { createFFmpeg, fetchFile } = FFmpeg;
+                    status.innerText = '正在按需載入 FFmpeg 轉碼核心，初次載入需數秒，請稍候...';
+                    const { createFFmpeg } = FFmpeg;
                     ffmpegInstance = createFFmpeg({ log: true });
                 }
 
@@ -402,10 +370,9 @@
 
                 for (let idx = 0; idx < filesVid.length; idx++) {
                     const fileVid = filesVid[idx];
-                    status.innerText = `正在壓縮第 ${idx + 1}/${filesVid.length} 支影片 (極速模式)：${fileVid.name}`;
+                    status.innerText = `正在壓縮第 ${idx + 1}/${filesVid.length} 支影片：${fileVid.name}`;
                     progressBar.style.width = '0%';
                     progressBar.innerText = '0%';
-                    timeEstimate.innerText = '正在計算預估時間...';
 
                     let startTime = Date.now();
 
@@ -414,20 +381,6 @@
                             const percent = Math.round(ratio * 100);
                             progressBar.style.width = percent + '%';
                             progressBar.innerText = percent + '%';
-
-                            if (percent > 2) {
-                                let elapsedTime = (Date.now() - startTime) / 1000;
-                                let estimatedTotalTime = elapsedTime / ratio;
-                                let remainingTime = Math.round(estimatedTotalTime - elapsedTime);
-
-                                if (remainingTime > 0) {
-                                    let mins = Math.floor(remainingTime / 60);
-                                    let secs = remainingTime % 60;
-                                    timeEstimate.innerText = `⏳ 預估剩餘時間：${mins > 0 ? mins + '分 ' : ''}${secs}秒`;
-                                } else {
-                                    timeEstimate.innerText = '⏳ 即將完成...';
-                                }
-                            }
                         }
                     });
 
@@ -454,7 +407,7 @@
                     ffmpegInstance.FS('unlink', outputName);
                 }
 
-                status.innerText = '所有影片批次壓縮完成，皆已完美維持原格式下載！';
+                status.innerText = '所有影片批次壓縮完成！';
                 progressBar.style.width = '100%';
                 progressBar.innerText = '100%';
                 timeEstimate.innerText = '✅ 全部處理完畢！';
@@ -467,7 +420,6 @@
             } catch (e) {
                 console.error(e);
                 status.innerText = '影片壓縮發生錯誤，請檢查主控台 (F12)。';
-                timeEstimate.innerText = '';
             } finally {
                 if (filesVid.length > 0) {
                     document.getElementById('btnVid').disabled = false;

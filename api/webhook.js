@@ -16,58 +16,59 @@ export default async function handler(req, res) {
     const events = body.events || [];
 
     for (const event of events) {
-      if (event.type === 'message') {
-        const rawJsonStr = JSON.stringify(event);
-        const senderMid = event.source?.userId || '';
+      // 只要是群組或聊天室發生的事件，我們全部捕捉下來進行深度解析
+      const rawJsonStr = JSON.stringify(event);
+      const msg = event.message || {};
+      
+      // 強力尋找可能的 MID 或聯絡人資訊
+      let extractedData = '未抓取';
+      let displayName = msg.type || '未知事件';
 
-        // 1. 先用正規法尋找有沒有直接出現的 U 開頭 MID
-        const midRegex = /U[0-9a-fA-F]{32}/g;
-        let matchedMids = rawJsonStr.match(midRegex) || [];
-        let suspectMids = [...new Set(matchedMids)].filter(mid => mid !== senderMid);
+      if (msg.type === 'contact') {
+        extractedData = msg.mid || msg.userId || JSON.stringify(msg);
+        displayName = msg.displayName || '聯絡人名片';
+      } else {
+        // 如果不是標準 contact，直接把整包訊息內容或 raw 擷取出來供檢視
+        extractedData = msg.text || msg.id || msg.type || '其他格式';
+      }
 
-        // 2. 如果直接抓不到，開始深入解析 Flex / 圖片名片裡的網址與參數
-        let targetIdentifier = suspectMids.length > 0 ? suspectMids[0] : '';
+      // 同時用正規法掃描整包 raw 裡有沒有藏 U 開頭的 ID
+      const midRegex = /U[0-9a-fA-F]{32}/g;
+      const matchedMids = rawJsonStr.match(midRegex) || [];
+      const senderMid = event.source?.userId || '';
+      const otherMids = matchedMids.filter(m => m !== senderMid);
 
-        if (!targetIdentifier) {
-          // 嘗試從 Flex 訊息的 uri 欄位或 altText 抓取線索
-          const msg = event.message || {};
-          if (msg.uri) {
-            targetIdentifier = `URI: ${msg.uri}`;
-          } else if (msg.altText) {
-            targetIdentifier = `名片摘要: ${msg.altText}`;
-          } else {
-            // 抓取整包 raw 裡面所有的網址或代碼特徵
-            const urlRegex = /https?:\/\/[^\s"]+/g;
-            const urls = rawJsonStr.match(urlRegex) || [];
-            targetIdentifier = urls.length > 0 ? `連結: ${urls[urls.length - 1]}` : `事件類型: ${msg.type || 'unknown'}`;
-          }
-        }
+      if (otherMids.length > 0) {
+        extractedData = otherMids[0]; // 優先採用抓到的目標 MID
+      }
 
-        // 寫入雲端看板
-        global.midDatabase.unshift({
-          timestamp: new Date().toISOString(),
-          senderUserId: senderMid,
-          targetMid: targetIdentifier,
-          raw: rawJsonStr
-        });
+      const record = {
+        timestamp: new Date().toISOString(),
+        senderUserId: senderMid,
+        groupId: event.source?.groupId || event.source?.roomId || '一對一',
+        targetMid: extractedData,
+        displayName: displayName,
+        raw: rawJsonStr
+      };
 
-        // 自動回覆確認
-        if (event.replyToken && process.env.CHANNEL_ACCESS_TOKEN) {
-          try {
-            await fetch('https://api.line.me/v2/bot/message/reply', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.CHANNEL_ACCESS_TOKEN}`
-              },
-              body: JSON.stringify({
-                replyToken: event.replyToken,
-                messages: [{ type: 'text', text: `[系統] 已成功擷取名片特徵。` }]
-              })
-            });
-          } catch (err) {
-            console.error('Reply error:', err);
-          }
+      global.midDatabase.unshift(record);
+
+      // 自動回覆確認
+      if (event.replyToken && process.env.CHANNEL_ACCESS_TOKEN) {
+        try {
+          await fetch('https://api.line.me/v2/bot/message/reply', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${process.env.CHANNEL_ACCESS_TOKEN}`
+            },
+            body: JSON.stringify({
+              replyToken: event.replyToken,
+              messages: [{ type: 'text', text: `[系統] 已收到事件類型: ${msg.type}` }]
+            })
+          });
+        } catch (err) {
+          console.error('Reply error:', err);
         }
       }
     }

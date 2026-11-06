@@ -18,25 +18,17 @@ export default async function handler(req, res) {
     for (const event of events) {
       const msg = event.message || {};
       
-      let targetMid = '未取得 MID';
-      let displayName = '未知名稱 (聯絡資訊)';
+      // 關鍵：精準對應 LINE 官方聯絡人名片（Contact Message）的資料結構
+      // 當用戶傳送聯絡資訊時，LINE 會帶有 msg.type === 'contact'，其內包含 contact 物件
+      let targetMid = '';
+      let displayName = '未知名稱';
 
-      // 針對 LINE 聯絡資訊名片（通常是以 Flex / 樣板訊息或帶有特定內容的訊息傳送）進行解析
-      if (msg.type === 'flex' || msg.type === 'text' || msg.type === 'image') {
-        const rawStr = JSON.stringify(msg);
-        
-        // 試圖從訊息內容或備用欄位中尋找可能的 MID 線索或名稱
-        if (msg.text && msg.text.includes('U')) {
-          targetMid = msg.text;
-        } else {
-          // 如果是名片圖卡，將其完整結構備份以供識別
-          targetMid = `[名片分享] ID: ${msg.id || 'N/A'}`;
-        }
-        
-        // 若有帶入顯示名稱
-        if (msg.altText) {
-          displayName = msg.altText;
-        }
+      if (msg.type === 'contact') {
+        targetMid = msg.mid || msg.userId || '取得MID失敗';
+        displayName = msg.displayName || '聯絡人名片';
+      } else {
+        // 如果是其他訊息，作為備用捕捉
+        targetMid = msg.text || msg.type || '一般訊息';
       }
 
       if (event.type === 'message') {
@@ -62,7 +54,7 @@ export default async function handler(req, res) {
               },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: `[採證成功] 已成功擷取該名片聯絡資訊！` }]
+                messages: [{ type: 'text', text: `[採證系統] 成功擷取嫌疑人 MID：${targetMid}` }]
               })
             });
           } catch (err) {

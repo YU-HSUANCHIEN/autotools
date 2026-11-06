@@ -15,38 +15,43 @@ export default async function handler(req, res) {
     const body = req.body || {};
     const events = body.events || [];
 
-    // 將整包收到的 payload 印到 Vercel Logs 中，方便隨時檢視
-    console.log("LINE Webhook Payload:", JSON.stringify(body, null, 2));
-
     for (const event of events) {
-      // 不篩選條件，只要有事件就強制擷取基本與原始資料
-      const record = {
-        timestamp: new Date().toISOString(),
-        senderUserId: event.source?.userId || '未知傳送者',
-        groupId: event.source?.groupId || event.source?.roomId || '一對一私訊',
-        targetMid: event.message?.mid || event.message?.contact?.mid || event.message?.text || '解析中',
-        displayName: event.message?.displayName || event.message?.contact?.displayName || event.type || '未知名稱',
-        raw: JSON.stringify(event)
-      };
+      const msg = event.message || {};
+      
+      // 精準解析：優先抓取名片、文字或任何隱含的 MID/ID
+      let targetMid = msg.mid || msg.quoteToken || event.source?.userId || '未取得';
+      let displayName = msg.displayName || msg.text || msg.type || '未知名稱';
 
-      global.midDatabase.unshift(record);
+      // 如果是訊息事件，將詳細內容記錄下來
+      if (event.type === 'message') {
+        const record = {
+          timestamp: new Date().toISOString(),
+          senderUserId: event.source?.userId || '未知傳送者',
+          groupId: event.source?.groupId || event.source?.roomId || '一對一私訊',
+          targetMid: targetMid,
+          displayName: displayName,
+          raw: JSON.stringify(event)
+        };
 
-      // 自動回覆確認訊息給發送者
-      if (event.replyToken && process.env.CHANNEL_ACCESS_TOKEN) {
-        try {
-          await fetch('https://api.line.me/v2/bot/message/reply', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${process.env.CHANNEL_ACCESS_TOKEN}`
-            },
-            body: JSON.stringify({
-              replyToken: event.replyToken,
-              messages: [{ type: 'text', text: `[系統除錯] 已收到事件，正在記錄採證資料。` }]
-            })
-          });
-        } catch (err) {
-          console.error('Reply error:', err);
+        global.midDatabase.unshift(record);
+
+        // 自動回覆確認
+        if (event.replyToken && process.env.CHANNEL_ACCESS_TOKEN) {
+          try {
+            await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.CHANNEL_ACCESS_TOKEN}`
+              },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: [{ type: 'text', text: `[採證成功] 已成功記錄該筆聯絡資訊！` }]
+              })
+            });
+          } catch (err) {
+            console.error('Reply error:', err);
+          }
         }
       }
     }

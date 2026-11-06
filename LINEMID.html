@@ -59,7 +59,7 @@ HTML
 
         async function loadData() {
             try {
-                const res = await fetch('/LINE-MID/api/mids');
+                const res = await fetch('/api/mids');
                 currentData = await res.json();
                 const tb = document.getElementById('tb');
                 
@@ -80,7 +80,7 @@ HTML
 
         async function clearData() {
             if (confirm('確定要清空所有採證紀錄嗎？')) {
-                await fetch('/LINE-MID/api/mids', { method: 'DELETE' });
+                await fetch('/api/mids', { method: 'DELETE' });
                 loadData();
             }
         }

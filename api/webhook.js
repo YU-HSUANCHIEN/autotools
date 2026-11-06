@@ -16,7 +16,6 @@ export default async function handler(req, res) {
     const events = body.events || [];
 
     for (const event of events) {
-      // 支援聯絡資訊名片與一般訊息，精準擷取 MID 與名稱
       const msg = event.message || {};
       const contact = msg.contact || {};
       
@@ -34,14 +33,14 @@ export default async function handler(req, res) {
 
         global.midDatabase.unshift(record);
 
-        // 如果有 replyToken，自動回覆確認訊息
-        if (event.replyToken && process.env.LINE_CHANNEL_ACCESS_TOKEN) {
+        // 使用你設定的 CHANNEL_ACCESS_TOKEN 自動回覆確認訊息
+        if (event.replyToken && process.env.CHANNEL_ACCESS_TOKEN) {
           try {
             await fetch('https://api.line.me/v2/bot/message/reply', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}`
+                'Authorization': `Bearer ${process.env.CHANNEL_ACCESS_TOKEN}`
               },
               body: JSON.stringify({
                 replyToken: event.replyToken,

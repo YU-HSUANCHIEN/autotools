@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LINE 辦案採證系統</title>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <!-- 修正：加上 crossorigin="anonymous" 避開 COEP 跨域阻擋 -->
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js" crossorigin="anonymous"></script>
   <style>
     body { font-family: sans-serif; background: #f4f7f6; padding: 20px; max-width: 500px; margin: auto; }
     .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -31,7 +32,7 @@
 
     async function initializeLiff() {
       try {
-        // 請替換為你在 LINE Developers 後台建立的 LIFF ID
+        // 請確保這裡填入的是你在 LINE Developers 後台建立的真實 LIFF ID (例如 1234567890-AbCdEfGh)
         await liff.init({ liffId: 'YOUR_LIFF_ID' }); 
         if (!liff.isLoggedIn()) {
           liff.login();
@@ -55,18 +56,7 @@
       }
 
       try {
-        const res = await axios.post('/api/webhook', {
-          type: 'liff_submit',
-          victimMid: victimMid,
-          victimName: victimName,
-          targetMid: suspectInfo,
-          timestamp: new Date().toISOString()
-        });
-        alert('採證資料已成功送至雲端看板！');
-        document.getElementById('suspectInfo').value = '';
-      } catch (err) {
-        // 若未使用 axios 也可用 fetch
-        fetch('/api/webhook', {
+        await fetch('/api/webhook', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -76,10 +66,12 @@
             targetMid: suspectInfo,
             timestamp: new Date().toISOString()
           })
-        }).then(() => {
-          alert('採證資料已成功送至雲端看板！');
-          document.getElementById('suspectInfo').value = '';
         });
+        alert('採證資料已成功送至雲端看板！');
+        document.getElementById('suspectInfo').value = '';
+      } catch (err) {
+        console.error(err);
+        alert('送出失敗');
       }
     }
 

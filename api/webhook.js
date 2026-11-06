@@ -18,11 +18,27 @@ export default async function handler(req, res) {
     for (const event of events) {
       const msg = event.message || {};
       
-      // 精準解析：優先抓取名片、文字或任何隱含的 MID/ID
-      let targetMid = msg.mid || msg.quoteToken || event.source?.userId || '未取得';
-      let displayName = msg.displayName || msg.text || msg.type || '未知名稱';
+      let targetMid = '未取得 MID';
+      let displayName = '未知名稱 (聯絡資訊)';
 
-      // 如果是訊息事件，將詳細內容記錄下來
+      // 針對 LINE 聯絡資訊名片（通常是以 Flex / 樣板訊息或帶有特定內容的訊息傳送）進行解析
+      if (msg.type === 'flex' || msg.type === 'text' || msg.type === 'image') {
+        const rawStr = JSON.stringify(msg);
+        
+        // 試圖從訊息內容或備用欄位中尋找可能的 MID 線索或名稱
+        if (msg.text && msg.text.includes('U')) {
+          targetMid = msg.text;
+        } else {
+          // 如果是名片圖卡，將其完整結構備份以供識別
+          targetMid = `[名片分享] ID: ${msg.id || 'N/A'}`;
+        }
+        
+        // 若有帶入顯示名稱
+        if (msg.altText) {
+          displayName = msg.altText;
+        }
+      }
+
       if (event.type === 'message') {
         const record = {
           timestamp: new Date().toISOString(),
@@ -46,7 +62,7 @@ export default async function handler(req, res) {
               },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: `[採證成功] 已成功記錄該筆聯絡資訊！` }]
+                messages: [{ type: 'text', text: `[採證成功] 已成功擷取該名片聯絡資訊！` }]
               })
             });
           } catch (err) {

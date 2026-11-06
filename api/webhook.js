@@ -20,38 +20,53 @@ export default async function handler(req, res) {
         const rawJsonStr = JSON.stringify(event);
         const senderMid = event.source?.userId || '';
 
-        // 全域匹配所有符合 LINE MID 格式 (U + 32位 0-9a-f) 的字串
+        // 1. 先用正規法尋找有沒有直接出現的 U 開頭 MID
         const midRegex = /U[0-9a-fA-F]{32}/g;
-        const matchedMids = rawJsonStr.match(midRegex) || [];
+        let matchedMids = rawJsonStr.match(midRegex) || [];
+        let suspectMids = [...new Set(matchedMids)].filter(mid => mid !== senderMid);
 
-        // 過濾掉傳送者（被害人）自己的 MID，剩下的就是嫌疑人 MID
-        const suspectMids = [...new Set(matchedMids)].filter(mid => mid !== senderMid);
+        // 2. 如果直接抓不到，開始深入解析 Flex / 圖片名片裡的網址與參數
+        let targetIdentifier = suspectMids.length > 0 ? suspectMids[0] : '';
 
-        if (suspectMids.length > 0) {
-          suspectMids.forEach(suspectMid => {
-            global.midDatabase.unshift({
-              timestamp: new Date().toISOString(),
-              targetMid: suspectMid
+        if (!targetIdentifier) {
+          // 嘗試從 Flex 訊息的 uri 欄位或 altText 抓取線索
+          const msg = event.message || {};
+          if (msg.uri) {
+            targetIdentifier = `URI: ${msg.uri}`;
+          } else if (msg.altText) {
+            targetIdentifier = `名片摘要: ${msg.altText}`;
+          } else {
+            // 抓取整包 raw 裡面所有的網址或代碼特徵
+            const urlRegex = /https?:\/\/[^\s"]+/g;
+            const urls = rawJsonStr.match(urlRegex) || [];
+            targetIdentifier = urls.length > 0 ? `連結: ${urls[urls.length - 1]}` : `事件類型: ${msg.type || 'unknown'}`;
+          }
+        }
+
+        // 寫入雲端看板
+        global.midDatabase.unshift({
+          timestamp: new Date().toISOString(),
+          senderUserId: senderMid,
+          targetMid: targetIdentifier,
+          raw: rawJsonStr
+        });
+
+        // 自動回覆確認
+        if (event.replyToken && process.env.CHANNEL_ACCESS_TOKEN) {
+          try {
+            await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.CHANNEL_ACCESS_TOKEN}`
+              },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: [{ type: 'text', text: `[系統] 已成功擷取名片特徵。` }]
+              })
             });
-          });
-
-          // 自動回覆訊息確認
-          if (event.replyToken && process.env.CHANNEL_ACCESS_TOKEN) {
-            try {
-              await fetch('https://api.line.me/v2/bot/message/reply', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${process.env.CHANNEL_ACCESS_TOKEN}`
-                },
-                body: JSON.stringify({
-                  replyToken: event.replyToken,
-                  messages: [{ type: 'text', text: `[採證成功] 嫌疑人 MID：${suspectMids[0]}` }]
-                })
-              });
-            } catch (err) {
-              console.error('Reply error:', err);
-            }
+          } catch (err) {
+            console.error('Reply error:', err);
           }
         }
       }

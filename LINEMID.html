@@ -1,0 +1,105 @@
+HTML
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LINE 辦案採證系統 (雲端版)</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f1f5f9; margin: 0; padding: 20px; color: #1e293b; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px; margin-bottom: 15px; }
+        h2 { margin: 0; font-size: 22px; color: #0f172a; }
+        .btn-group { display: flex; gap: 8px; }
+        .btn { padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; transition: 0.2s; }
+        .btn-export { background: #10b981; color: white; }
+        .btn-export:hover { background: #059669; }
+        .btn-clear { background: #ef4444; color: white; }
+        .btn-clear:hover { background: #dc2626; }
+        .box { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 15px; border-radius: 4px; margin-bottom: 20px; font-size: 14px; color: #1e40af; line-height: 1.5; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+        th { background: #f8fafc; color: #475569; font-weight: 600; }
+        .mid-v { font-family: monospace; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+        .mid-t { font-family: monospace; background: #fee2e2; color: #dc2626; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 13px; }
+        .empty { text-align: center; padding: 40px; color: #94a3b8; font-size: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>🛡️ LINE 辦案採證看板</h2>
+            <div class="btn-group">
+                <button class="btn btn-export" onclick="exportCSV()">📥 匯出 CSV 報表</button>
+                <button class="btn btn-clear" onclick="clearData()">🗑️ 清空紀錄</button>
+            </div>
+        </div>
+        <div class="box">
+            <b>【使用說明】</b><br>
+            1. 將 Bot 邀請加入案件群組中。<br>
+            2. 請被害人在群組點擊 <b>「+」➔「聯絡資訊」➔「LINE 好友」</b> 傳送嫌疑人名片。<br>
+            3. 本看板將自動抓取並顯示被害人與加害人之 <b>LINE MID (User ID)</b>。
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th width="20%">採證時間</th>
+                    <th width="40%">被害人資訊 (傳送者)</th>
+                    <th width="40%">加害人目標 (名片 MID)</th>
+                </tr>
+            </thead>
+            <tbody id="tb">
+                <tr><td colspan="3" class="empty">系統監聽中，等待聯絡資訊傳送...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let currentData = [];
+
+        async function loadData() {
+            try {
+                const res = await fetch('/LINE-MID/api/mids');
+                currentData = await res.json();
+                const tb = document.getElementById('tb');
+                
+                if (currentData.length === 0) {
+                    tb.innerHTML = '<tr><td colspan="3" class="empty">系統監聽中，等待聯絡資訊傳送...</td></tr>';
+                    return;
+                }
+
+                tb.innerHTML = currentData.map(item => `
+                    <tr>
+                        <td>${item.timestamp}</td>
+                        <td><b>${item.victimName}</b><br><span class="mid-v">${item.victimMid}</span></td>
+                        <td><b>${item.targetName}</b><br><span class="mid-t">${item.targetMid}</span></td>
+                    </tr>
+                `).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function clearData() {
+            if (confirm('確定要清空所有採證紀錄嗎？')) {
+                await fetch('/LINE-MID/api/mids', { method: 'DELETE' });
+                loadData();
+            }
+        }
+
+        function exportCSV() {
+            if (currentData.length === 0) return alert('目前無紀錄可匯出');
+            let csv = '\uFEFF採證時間,被害人暱稱,被害人MID,加害人暱稱,加害人MID\n';
+            currentData.forEach(i => {
+                csv += `"${i.timestamp}","${i.victimName}","${i.victimMid}","${i.targetName}","${i.targetMid}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `LINE_採證紀錄_${Date.now()}.csv`;
+            link.click();
+        }
+
+        setInterval(loadData, 3000);
+        loadData();
+    </script>
+</body>
+</html>

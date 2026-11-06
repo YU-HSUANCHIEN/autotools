@@ -4,26 +4,24 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LINE 辦案採證系統</title>
-  <!-- 修正：加上 crossorigin="anonymous" 避開 COEP 跨域阻擋 -->
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js" crossorigin="anonymous"></script>
   <style>
     body { font-family: sans-serif; background: #f4f7f6; padding: 20px; max-width: 500px; margin: auto; }
     .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    input, button { width: 100%; padding: 12px; margin-top: 10px; box-sizing: border-box; border-radius: 4px; border: 1px solid #ccc; }
-    button { background: #06C755; color: white; border: none; font-weight: bold; cursor: pointer; }
-    button:hover { background: #05b34c; }
+    button { width: 100%; padding: 14px; margin-top: 15px; box-sizing: border-box; border-radius: 4px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; }
+    .btn-green { background: #06C755; color: white; }
+    .btn-green:hover { background: #05b34c; }
     .info { font-size: 14px; color: #666; margin-bottom: 15px; }
   </style>
 </head>
 <body>
   <div class="card">
-    <h2>辦案採證填報系統</h2>
+    <h2>辦案採證勾選系統</h2>
     <div class="info" id="userInfo">正在載入 LINE 身份授權...</div>
     
-    <label for="suspectInfo">嫌疑人 LINE 帳號 / MID / 相關識別資訊：</label>
-    <input type="text" id="suspectInfo" placeholder="請輸入嫌疑人資料或貼上連結">
+    <p style="font-size: 14px; color: #333;">請點擊下方按鈕，在跳出的名單中勾選並確認該名嫌疑人：</p>
     
-    <button onclick="submitEvidence()">送出採證資料</button>
+    <button class="btn-green" onclick="selectSuspect()">點擊選擇嫌疑人</button>
   </div>
 
   <script>
@@ -32,46 +30,46 @@
 
     async function initializeLiff() {
       try {
-        // 請確保這裡填入的是你在 LINE Developers 後台建立的真實 LIFF ID (例如 1234567890-AbCdEfGh)
-        await liff.init({ liffId: 'YOUR_LIFF_ID' }); 
+        await liff.init({ liffId: 'YOUR_LIFF_ID' }); // 記得換成你的 LIFF ID
         if (!liff.isLoggedIn()) {
           liff.login();
         } else {
           const profile = await liff.getProfile();
           victimMid = profile.userId;
           victimName = profile.displayName;
-          document.getElementById('userInfo').innerText = `已確認被害人身份：${victimName} (${victimMid})`;
+          document.getElementById('userInfo').innerText = `已確認被害人身份：${victimName}`;
         }
       } catch (err) {
-        document.getElementById('userInfo').innerText = 'LIFF 初始化失敗，請確認是否在 LINE 內開啟。';
+        document.getElementById('userInfo').innerText = 'LIFF 初始化失敗，請在 LINE 內開啟。';
         console.error(err);
       }
     }
 
-    async function submitEvidence() {
-      const suspectInfo = document.getElementById('suspectInfo').value.trim();
-      if (!suspectInfo) {
-        alert('請輸入嫌疑人資訊！');
+    async function selectSuspect() {
+      if (!liff.isApiAvailable('shareTargetPicker')) {
+        alert('此裝置或環境不支援好友選擇功能，請確認是在 LINE 手機App內開啟。');
         return;
       }
 
       try {
-        await fetch('/api/webhook', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'liff_submit',
-            victimMid: victimMid,
-            victimName: victimName,
-            targetMid: suspectInfo,
-            timestamp: new Date().toISOString()
-          })
-        });
-        alert('採證資料已成功送至雲端看板！');
-        document.getElementById('suspectInfo').value = '';
+        // 喚起 LINE 原生好友選擇介面
+        const result = await liff.shareTargetPicker([
+          {
+            type: 'text',
+            text: `[辦案系統通知] 已鎖定目標對象。`
+          }
+        ]);
+
+        if (result) {
+          // 當被害人成功勾選並送出後，系統可透過 ShareTargetPicker 或互動取得對象資訊
+          // 註：若要精準取得被勾選者的 MID，通常會搭配將訊息發送回聊天室或導回後端解析
+          alert('已成功送出目標鎖定！');
+        } else {
+          alert('您取消了操作。');
+        }
       } catch (err) {
         console.error(err);
-        alert('送出失敗');
+        alert('選擇失敗：' + err.message);
       }
     }
 

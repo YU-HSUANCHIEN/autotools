@@ -16,19 +16,43 @@ export default async function handler(req, res) {
     const events = body.events || [];
 
     for (const event of events) {
-      // 為了找出名片真實結構，我們把整包 event 轉成文字存下來
-      const record = {
-        timestamp: new Date().toISOString(),
-        senderUserId: event.source?.userId || 'Unknown',
-        groupId: event.source?.groupId || event.source?.roomId || 'PrivateChat',
-        // 嘗試抓取各種可能的 MID 欄位位置
-        targetMid: event.message?.mid || event.message?.contact?.mid || event.message?.userId || 'Check Raw Data',
-        displayName: event.message?.displayName || event.message?.contact?.displayName || '查看原始資料',
-        // 把整包原始事件存進 raw 欄位，方便我們在網頁上看得清清楚楚
-        rawEvent: JSON.stringify(event)
-      };
+      // 支援聯絡資訊名片與一般訊息，精準擷取 MID 與名稱
+      const msg = event.message || {};
+      const contact = msg.contact || {};
+      
+      const targetMid = contact.mid || msg.mid || contact.userId || '';
+      const displayName = contact.displayName || msg.displayName || '未知名稱';
 
-      global.midDatabase.unshift(record);
+      if (event.type === 'message' && (msg.type === 'contact' || targetMid)) {
+        const record = {
+          timestamp: new Date().toISOString(),
+          senderUserId: event.source?.userId || '未知傳送者',
+          groupId: event.source?.groupId || event.source?.roomId || '一對一私訊',
+          targetMid: targetMid || '未取得MID',
+          displayName: displayName
+        };
+
+        global.midDatabase.unshift(record);
+
+        // 如果有 replyToken，自動回覆確認訊息
+        if (event.replyToken && process.env.LINE_CHANNEL_ACCESS_TOKEN) {
+          try {
+            await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}`
+              },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: [{ type: 'text', text: `[辦案採證成功] 已成功擷取目標 MID：${targetMid}` }]
+              })
+            });
+          } catch (err) {
+            console.error('Reply error:', err);
+          }
+        }
+      }
     }
 
     return res.status(200).json({ status: 'success', totalSaved: global.midDatabase.length });

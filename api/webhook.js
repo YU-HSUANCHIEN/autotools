@@ -15,7 +15,9 @@ export default async function handler(req, res) {
 
   // 3. 當 LINE 官方伺服器或 PowerShell 測試（POST 請求）傳入資料時
   if (req.method === 'POST') {
-    const events = req.body.events || [];
+    // 增加防呆保護：若 body 為空或沒有 events，直接回傳成功以防 LINE 重覆發送爆錯
+    const body = req.body || {};
+    const events = body.events || [];
 
     for (const event of events) {
       const contactData = event.message?.contact || event.message;

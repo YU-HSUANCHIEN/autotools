@@ -2,39 +2,33 @@
 global.midDatabase = global.midDatabase || [];
 
 export default async function handler(req, res) {
-  // 1. 當用瀏覽器直接造訪此網址（GET 請求）時，顯示目前收集到的所有 MID 採證紀錄
   if (req.method === 'GET') {
     return res.status(200).json(global.midDatabase);
   }
 
-  // 2. 當發送 DELETE 請求時，清空所有採證紀錄
   if (req.method === 'DELETE') {
     global.midDatabase = [];
     return res.status(200).json({ message: 'Cleared' });
   }
 
-  // 3. 當 LINE 官方伺服器或 PowerShell 測試（POST 請求）傳入資料時
   if (req.method === 'POST') {
-    // 增加防呆保護：若 body 為空或沒有 events，直接回傳成功以防 LINE 重覆發送爆錯
     const body = req.body || {};
     const events = body.events || [];
 
     for (const event of events) {
-      const contactData = event.message?.contact || event.message;
-      
-      // 判斷是否為訊息事件且包含聯絡資訊/MID
-      if (event.type === 'message' && (event.message?.type === 'contact' || contactData?.mid)) {
-        const record = {
-          timestamp: new Date().toISOString(),
-          senderUserId: event.source?.userId || 'TestUser',
-          groupId: event.source?.groupId || event.source?.roomId || 'TestGroup',
-          targetMid: contactData.mid || contactData.contact?.mid || 'No MID',
-          displayName: contactData.displayName || contactData.contact?.displayName || '未知名稱'
-        };
+      // 為了找出名片真實結構，我們把整包 event 轉成文字存下來
+      const record = {
+        timestamp: new Date().toISOString(),
+        senderUserId: event.source?.userId || 'Unknown',
+        groupId: event.source?.groupId || event.source?.roomId || 'PrivateChat',
+        // 嘗試抓取各種可能的 MID 欄位位置
+        targetMid: event.message?.mid || event.message?.contact?.mid || event.message?.userId || 'Check Raw Data',
+        displayName: event.message?.displayName || event.message?.contact?.displayName || '查看原始資料',
+        // 把整包原始事件存進 raw 欄位，方便我們在網頁上看得清清楚楚
+        rawEvent: JSON.stringify(event)
+      };
 
-        // 將抓取到的資料推入全域陣列最前方
-        global.midDatabase.unshift(record);
-      }
+      global.midDatabase.unshift(record);
     }
 
     return res.status(200).json({ status: 'success', totalSaved: global.midDatabase.length });

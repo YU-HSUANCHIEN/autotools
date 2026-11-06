@@ -1,4 +1,3 @@
-HTML
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -59,11 +58,12 @@ HTML
 
         async function loadData() {
             try {
-                const res = await fetch('/api/mids');
+                // 改為請求整合後的 /api/webhook 路由
+                const res = await fetch('/api/webhook');
                 currentData = await res.json();
                 const tb = document.getElementById('tb');
                 
-                if (currentData.length === 0) {
+                if (!Array.isArray(currentData) || currentData.length === 0) {
                     tb.innerHTML = '<tr><td colspan="3" class="empty">系統監聽中，等待聯絡資訊傳送...</td></tr>';
                     return;
                 }
@@ -71,8 +71,8 @@ HTML
                 tb.innerHTML = currentData.map(item => `
                     <tr>
                         <td>${item.timestamp}</td>
-                        <td><b>${item.victimName}</b><br><span class="mid-v">${item.victimMid}</span></td>
-                        <td><b>${item.targetName}</b><br><span class="mid-t">${item.targetMid}</span></td>
+                        <td><b>群組/用戶</b><br><span class="mid-v">${item.senderUserId}</span></td>
+                        <td><b>${item.displayName || '未知名稱'}</b><br><span class="mid-t">${item.targetMid}</span></td>
                     </tr>
                 `).join('');
             } catch (e) { console.error(e); }
@@ -80,16 +80,17 @@ HTML
 
         async function clearData() {
             if (confirm('確定要清空所有採證紀錄嗎？')) {
-                await fetch('/api/mids', { method: 'DELETE' });
+                // 發送 DELETE 請求至 /api/webhook 清空陣列
+                await fetch('/api/webhook', { method: 'DELETE' });
                 loadData();
             }
         }
 
         function exportCSV() {
             if (currentData.length === 0) return alert('目前無紀錄可匯出');
-            let csv = '\uFEFF採證時間,被害人暱稱,被害人MID,加害人暱稱,加害人MID\n';
+            let csv = '\uFEFF採證時間,被害人/傳送者ID,加害人暱稱,加害人MID\n';
             currentData.forEach(i => {
-                csv += `"${i.timestamp}","${i.victimName}","${i.victimMid}","${i.targetName}","${i.targetMid}"\n`;
+                csv += `"${i.timestamp}","${i.senderUserId}","${i.displayName || '未知名稱'}","${i.targetMid}"\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
@@ -98,6 +99,7 @@ HTML
             link.click();
         }
 
+        // 每 3 秒自動輪詢更新看板
         setInterval(loadData, 3000);
         loadData();
     </script>

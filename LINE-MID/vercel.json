@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/webhook", "destination": "/api/webhook" },
-    { "source": "/api/mids", "destination": "/api/mids" }
+    { "source": "/LINE-MID/webhook", "destination": "/LINE-MID/api/webhook" },
+    { "source": "/LINE-MID/api/mids", "destination": "/LINE-MID/api/mids" }
   ]
 }

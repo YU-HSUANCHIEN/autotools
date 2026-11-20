@@ -26,11 +26,14 @@
             </button>
             <div class="w-16 h-16 bg-sky-500 rounded-2xl flex items-center justify-center text-white text-3xl mx-auto shadow-lg mb-4">⚖️</div>
             <h1 class="text-white font-black text-xl">詐欺小工具</h1>
-            <p class="text-slate-500 text-xs mt-1 uppercase tracking-widest">Version 6.6</p>
+            <p class="text-slate-500 text-xs mt-1 uppercase tracking-widest">Version 6.7</p>
         </div>
         <nav class="flex flex-col sm:flex-row md:flex-col gap-2 p-4 md:px-4 md:mt-6 overflow-x-auto sm:overflow-x-visible">
             <button onclick="switchTab('withdraw')" id="tabBtn-withdraw" class="whitespace-nowrap flex-1 md:flex-none w-full flex items-center justify-center md:justify-start px-5 py-4 rounded-2xl bg-sky-600 text-white shadow-xl font-bold transition-all">
                 <span class="mr-3">📋</span> 提領一覽表製作
+            </button>
+            <button onclick="switchTab('merge')" id="tabBtn-merge" class="whitespace-nowrap flex-1 md:flex-none w-full flex items-center justify-center md:justify-start px-5 py-4 rounded-2xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all font-bold">
+                <span class="mr-3">📑</span> 提領一覽表整合
             </button>
             <button onclick="switchTab('csv')" id="tabBtn-csv" class="whitespace-nowrap flex-1 md:flex-none w-full flex items-center justify-center md:justify-start px-5 py-4 rounded-2xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all font-bold">
                 <span class="mr-3">📂</span> CSV 轉 XLSX
@@ -41,9 +44,11 @@
         </nav>
         <div id="libStatus" class="hidden md:block p-4 text-[15px] text-center text-emerald-400 font-bold bg-black/20 mt-auto">✅ 該系統無連線功能</div>
     </div>
+
     <main class="flex-1 overflow-y-auto p-4 sm:p-8 md:p-12">
         <div class="max-w-5xl mx-auto">
             
+            <!-- 分頁 1：提領一覽表製作 -->
             <div id="tab-withdraw">
                 <div class="mb-8 md:mb-10">
                     <h2 class="text-3xl md:text-4xl font-black text-slate-800 dark:text-white">提領一覽表製作</h2>
@@ -98,6 +103,93 @@
                 </div>
             </div>
 
+            <!-- 分頁 2：提領一覽表自動整合 (V11) -->
+            <div id="tab-merge" class="hidden">
+                <div class="mb-8 md:mb-10">
+                    <h2 class="text-3xl md:text-4xl font-black text-slate-800 dark:text-white">提領一覽表自動整合 (A4直式版)</h2>
+                    <p class="text-slate-500 dark:text-slate-400 mt-2">選取各銀行「提領一覽表」Excel 檔，自由調整排列順序，自動依銀行與提領地點分類、轉換金額為「萬」</p>
+                </div>
+
+                <div id="v11AlertBox" class="hidden p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 mb-6 text-sm whitespace-pre-wrap font-medium"></div>
+
+                <!-- 檔案上傳與排序區塊 -->
+                <div class="bg-white dark:bg-slate-800 rounded-[2rem] md:rounded-[2.5rem] shadow-2xl p-6 sm:p-10 border border-slate-100 dark:border-slate-700 transition-colors mb-8">
+                    <div class="flex flex-wrap items-center gap-3 mb-6">
+                        <input type="file" id="v11FileInput" accept=".xlsx,.xls" multiple class="hidden" />
+                        <button type="button" onclick="document.getElementById('v11FileInput').click()" class="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-md transition-all">
+                            ＋ 選擇提領一覽表 (.xlsx)
+                        </button>
+                        <button type="button" id="v11ClearBtn" onclick="v11ClearFiles()" disabled class="px-5 py-3 rounded-xl border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                            清空全部檔案
+                        </button>
+                        <span class="text-xs text-slate-400">提示：可拖曳卡片或按「▲ / ▼」調整順序</span>
+                    </div>
+
+                    <div id="v11DropZone" onclick="document.getElementById('v11FileInput').click()" class="border-4 border-dashed border-slate-200 dark:border-slate-700 rounded-[1.5rem] p-8 text-center bg-slate-50/50 dark:bg-slate-900/40 hover:bg-slate-50 dark:hover:bg-slate-900/70 text-slate-500 dark:text-slate-400 cursor-pointer transition-colors mb-4">
+                        <div class="text-4xl mb-3">📑</div>
+                        <p class="font-bold text-sm text-slate-700 dark:text-slate-300">將「提領一覽表」Excel 檔案拖曳至此處，或點擊選擇檔案（支援一次多選）</p>
+                    </div>
+
+                    <ul id="v11FileList" class="space-y-2.5"></ul>
+                </div>
+
+                <!-- 選項設定與預覽匯出區塊 -->
+                <div class="bg-white dark:bg-slate-800 rounded-[2rem] md:rounded-[2.5rem] shadow-2xl p-6 sm:p-10 border border-slate-100 dark:border-slate-700 transition-colors">
+                    <div class="flex flex-wrap gap-x-6 gap-y-3 p-4 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-100 dark:border-slate-700 mb-6 text-sm text-slate-700 dark:text-slate-300">
+                        <label class="inline-flex items-center gap-2 cursor-pointer font-medium">
+                            <input type="checkbox" id="v11OptAddSue" checked onchange="v11RebuildAndRender()" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500" />
+                            被害人統一加上「(提告)」
+                        </label>
+                        <label class="inline-flex items-center gap-2 cursor-pointer font-medium">
+                            <input type="checkbox" id="v11OptWan" checked onchange="v11RebuildAndRender()" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500" />
+                            金額轉換以「萬」呈現（提領金額自動扣5元手續費）
+                        </label>
+                        <label class="inline-flex items-center gap-2 cursor-pointer font-medium">
+                            <input type="checkbox" id="v11OptFormatLoc" checked onchange="v11RebuildAndRender()" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500" />
+                            提領地點整理為「地址＋門市」
+                        </label>
+                        <label class="inline-flex items-center gap-2 cursor-pointer font-medium">
+                            <input type="checkbox" id="v11OptFormatTime" checked onchange="v11RebuildAndRender()" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500" />
+                            時間轉換為「○○時○○分許」並日期時間換行
+                        </label>
+                        <label class="inline-flex items-center gap-2 cursor-pointer font-medium">
+                            <input type="checkbox" id="v11OptMergeSpan" checked onchange="v11RebuildAndRender()" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500" />
+                            同被害人／多地點／無提領列自動跨列合併置中
+                        </label>
+                    </div>
+
+                    <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+                        <div id="v11StatsText" class="text-sm font-bold text-slate-700 dark:text-slate-300">尚未匯入任何檔案</div>
+                        <button type="button" id="v11ExportBtn" onclick="v11ExportExcel()" disabled class="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+                            ⬇ 匯出整合 Excel (.xlsx)
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto max-h-[550px] border border-slate-200 dark:border-slate-700 rounded-2xl">
+                        <table class="w-full border-collapse text-xs bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200">
+                            <thead>
+                                <tr>
+                                    <th class="border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-2 font-bold text-center sticky top-0 z-10 w-[55px]">編號</th>
+                                    <th class="border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-2 font-bold text-center sticky top-0 z-10 w-[95px]">被害人</th>
+                                    <th class="border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-2 font-bold text-center sticky top-0 z-10 w-[220px]">詐騙方式</th>
+                                    <th class="border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-2 font-bold text-center sticky top-0 z-10 w-[170px]">匯款時間</th>
+                                    <th class="border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-2 font-bold text-center sticky top-0 z-10 w-[120px]">匯款金額<br>(新臺幣)元</th>
+                                    <th class="border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-2 font-bold text-center sticky top-0 z-10 w-[185px]">匯入帳戶</th>
+                                    <th class="border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-2 font-bold text-center sticky top-0 z-10 w-[170px]">提領時間</th>
+                                    <th class="border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-2 font-bold text-center sticky top-0 z-10 w-[120px]">提領金額<br>(新臺幣)元</th>
+                                    <th class="border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-2 font-bold text-center sticky top-0 z-10 w-[170px]">提領地點</th>
+                                    <th class="border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 p-2 font-bold text-center sticky top-0 z-10 w-[85px]">案號</th>
+                                </tr>
+                            </thead>
+                            <tbody id="v11PreviewBody">
+                                <tr><td colspan="10" class="text-center py-12 text-slate-400">請先上方選取「提領一覽表」檔案以預覽整合結果</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 分頁 3：CSV 批次轉檔工具 -->
             <div id="tab-csv" class="hidden">
                 <div class="mb-8 md:mb-10">
                     <h2 class="text-3xl md:text-4xl font-black text-slate-800 dark:text-white">CSV 批次轉檔工具</h2>
@@ -130,13 +222,13 @@
                             <span class="mr-2">⚠️</span> 轉換異常檔案報告 (<span id="errorCount">0</span>)
                         </h4>
                         <div class="bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/50 rounded-2xl p-4 max-h-60 overflow-y-auto">
-                            <ul id="errorLogList" class="text-xs text-rose-700 dark:text-rose-300 space-y-1.5 list-disc pl-4 font-mono">
-                                </ul>
+                            <ul id="errorLogList" class="text-xs text-rose-700 dark:text-rose-300 space-y-1.5 list-disc pl-4 font-mono"></ul>
                         </div>
                     </div>
                 </div>
             </div>
 
+            <!-- 分頁 4：其他小工具下載 -->
             <div id="tab-tools" class="hidden">
                 <div class="mb-8 md:mb-10">
                     <h2 class="text-3xl md:text-4xl font-black text-slate-800 dark:text-white">其他小工具下載</h2>
@@ -181,6 +273,7 @@
                 </div>
             </div>
 
+            <!-- 系統日誌區 -->
             <div class="mt-8 bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-inner">
                 <div class="flex justify-between items-center mb-2">
                     <span class="text-[12px] font-bold text-slate-400 tracking-wider flex items-center">
@@ -193,6 +286,7 @@
 
         </div>
     </main>
+
     <script type="module">
         //------------ 日誌輸出函數 ------------
         window.logMessage = function(text) {
@@ -202,6 +296,7 @@
             logTextArea.value += `[${timestamp}] ${text}\n`;
             logTextArea.scrollTop = logTextArea.scrollHeight;
         };
+
         //------------ 模式切換邏輯 ------------
         window.toggleDarkMode = function() {
             const html = document.documentElement;
@@ -218,47 +313,50 @@
                 logMessage("切換至：深色模式");
             }
         };
-        // 頁面初始化載入偏好主題
+
         if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
             document.documentElement.classList.add('dark');
             const icon = document.getElementById('theme-icon');
             if(icon) icon.innerText = '☀️';
         }
-        //------------ 介面切換邏輯（掛載至 window） ------------
+
+        //------------ 介面切換邏輯 ------------
         window.switchTab = function(tab) {
-            const withdrawTab = document.getElementById('tab-withdraw');
-            const csvTab = document.getElementById('tab-csv');
-            const toolsTab = document.getElementById('tab-tools');
-
-            const btnWithdraw = document.getElementById('tabBtn-withdraw');
-            const btnCsv = document.getElementById('tabBtn-csv');
-            const btnTools = document.getElementById('tabBtn-tools');
-
-            if (withdrawTab) withdrawTab.classList.add('hidden');
-            if (csvTab) csvTab.classList.add('hidden');
-            if (toolsTab) toolsTab.classList.add('hidden');
-
+            const tabs = ['withdraw', 'merge', 'csv', 'tools'];
             const defaultBtnClass = "whitespace-nowrap flex-1 md:flex-none w-full flex items-center justify-center md:justify-start px-5 py-4 rounded-2xl text-slate-400 hover:bg-slate-800 hover:text-white transition-all font-bold";
-            if (btnWithdraw) btnWithdraw.className = defaultBtnClass;
-            if (btnCsv) btnCsv.className = defaultBtnClass;
-            if (btnTools) btnTools.className = defaultBtnClass;
 
-            if (tab === 'withdraw') {
-                if (withdrawTab) withdrawTab.classList.remove('hidden');
-                if (btnWithdraw) btnWithdraw.className = "whitespace-nowrap flex-1 md:flex-none w-full flex items-center justify-center md:justify-start px-5 py-4 rounded-2xl bg-sky-600 text-white shadow-xl font-bold transition-all";
-            } 
-            else if (tab === 'csv') {
-                if (csvTab) csvTab.classList.remove('hidden');
-                if (btnCsv) btnCsv.className = "whitespace-nowrap flex-1 md:flex-none w-full flex items-center justify-center md:justify-start px-5 py-4 rounded-2xl bg-emerald-600 text-white shadow-xl font-bold transition-all";
-            } 
-            else if (tab === 'tools') {
-                if (toolsTab) toolsTab.classList.remove('hidden');
-                if (btnTools) btnTools.className = "whitespace-nowrap flex-1 md:flex-none w-full flex items-center justify-center md:justify-start px-5 py-4 rounded-2xl bg-purple-600 text-white shadow-xl font-bold transition-all";
+            tabs.forEach(t => {
+                const el = document.getElementById(`tab-${t}`);
+                const btn = document.getElementById(`tabBtn-${t}`);
+                if (el) el.classList.add('hidden');
+                if (btn) btn.className = defaultBtnClass;
+            });
+
+            const activeEl = document.getElementById(`tab-${tab}`);
+            const activeBtn = document.getElementById(`tabBtn-${tab}`);
+            if (activeEl) activeEl.classList.remove('hidden');
+
+            const activeStyles = {
+                withdraw: "bg-sky-600 text-white shadow-xl",
+                merge: "bg-indigo-600 text-white shadow-xl",
+                csv: "bg-emerald-600 text-white shadow-xl",
+                tools: "bg-purple-600 text-white shadow-xl"
+            };
+
+            if (activeBtn && activeStyles[tab]) {
+                activeBtn.className = `whitespace-nowrap flex-1 md:flex-none w-full flex items-center justify-center md:justify-start px-5 py-4 rounded-2xl ${activeStyles[tab]} font-bold transition-all`;
             }
-            logMessage(`切換系統介面 ➡️ ${tab === 'withdraw' ? '提領一覽表製作' : tab === 'csv' ? 'CSV批次轉檔' : '輔助工具下載'}`);
+
+            const tabNames = {
+                withdraw: '提領一覽表製作',
+                merge: '提領一覽表自動整合 (A4直式版)',
+                csv: 'CSV 批次轉檔',
+                tools: '輔助工具下載'
+            };
+            logMessage(`切換系統介面 ➡️ ${tabNames[tab] || tab}`);
         };
 
-        //------------ 提領一覽表核心比對邏輯 ------------
+        //------------ 1. 提領一覽表核心比對邏輯 ------------
         const BANK_DICT = {"004": "臺灣銀行","005": "臺灣土地銀行","006": "合作金庫商業銀行","007": "第一商業銀行","008": "華南商業銀行",
         "009": "彰化商業銀行","011": "上海商業儲蓄銀行","012": "台北富邦商業銀行","013": "國泰世華商業銀行",
         "016": "高雄銀行","017": "兆豐國際商業銀行","018": "全國農業金庫","020": "日商瑞穗銀行臺北分行",
@@ -282,10 +380,12 @@
         "812": "台新國際商業銀行","815": "日盛國際商業銀行","816": "安泰商業銀行","822": "中國信託商業銀行",
         "823": "將來商業銀行","824": "連線商業銀行","826": "樂天國際商業銀行","910": "農會相關單位","951": "北區農會",
         "952": "大埔鄉農會","954": "中區農會","961": "同袍儲蓄會","997": "南資中心"};
+
         const pdfjsLib = window['pdfjs-dist/build/pdf'];
         if (pdfjsLib) {
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
         }
+
         window.updateFileList = function() {
             const input = document.getElementById('pdfFiles');
             const display = document.getElementById('fileNamesDisplay');
@@ -311,6 +411,7 @@
             }
             return val;
         }
+
         window.handleProcess = async function() {
             const mainFile = document.getElementById('mainFile').files[0];
             const extraFiles = document.getElementById('pdfFiles').files;
@@ -506,7 +607,870 @@
             });
         }
 
-        //------------------- CSV 批次轉檔工具升級版 ----------------------
+        //------------------- 2. 提領一覽表自動整合 (V11 邏輯) ----------------------
+        let v11UploadedFiles = [];
+        let v11MergedOutputRows = [];
+        let v11DragSrcIndex = null;
+
+        const V11_CIRCLED_NUMS = ["①","②","③","④","⑤","⑥","⑦","⑧","⑨","⑩","⑪","⑫","⑬","⑭","⑮","⑯","⑰","⑱","⑲","⑳"];
+        const V11_COLUMN_WIDTHS = [5.85, 10.28, 25.84, 18.71, 13.71, 20.71, 18.71, 13.71, 17.71, 9.09];
+
+        function v11BuildFraudDescription(rawFraud) {
+            const cleaned = String(rawFraud || "").replace(/\r?\n/g, "").trim().replace(/[。，、；\s]+$/g, "");
+            if (!cleaned) {
+                return "遭詐騙集團OOOOOOOOOOOOOO等云云，遂於右列時間，操作匯款右列金額，至右列帳戶。";
+            }
+            const body = cleaned.startsWith("遭詐騙集團") ? cleaned.replace(/^遭詐騙集團/, "") : cleaned;
+            return `遭詐騙集團以${body}之方式詐騙，遂於右列時間，操作匯款右列金額，至右列帳戶。`;
+        }
+
+        function v11ShowError(msg) {
+            const box = document.getElementById("v11AlertBox");
+            box.classList.remove("hidden");
+            box.textContent = msg;
+            logMessage(`⚠️ [一覽表整合] ${msg}`);
+        }
+
+        function v11ClearError() {
+            const box = document.getElementById("v11AlertBox");
+            box.classList.add("hidden");
+            box.textContent = "";
+        }
+
+        const v11FileInput = document.getElementById("v11FileInput");
+        const v11DropZone = document.getElementById("v11DropZone");
+
+        v11FileInput.addEventListener("change", (e) => v11HandleFiles(e.target.files));
+        v11DropZone.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            v11DropZone.classList.add("border-indigo-500", "bg-indigo-50/50", "dark:bg-indigo-950/30");
+        });
+        v11DropZone.addEventListener("dragleave", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            v11DropZone.classList.remove("border-indigo-500", "bg-indigo-50/50", "dark:bg-indigo-950/30");
+        });
+        v11DropZone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            v11DropZone.classList.remove("border-indigo-500", "bg-indigo-50/50", "dark:bg-indigo-950/30");
+            v11HandleFiles(e.dataTransfer.files);
+        });
+
+        async function v11HandleFiles(fileListObj) {
+            v11ClearError();
+            if (typeof XLSX === "undefined") {
+                v11ShowError("XLSX 套件尚未載入，無法讀取 Excel 檔案。");
+                return;
+            }
+            const files = Array.from(fileListObj || []).filter(f => /\.xlsx?$/i.test(f.name) && !f.name.startsWith("~$"));
+            if (files.length === 0) {
+                v11ShowError("未偵測到有效的 .xlsx / .xls 檔案。");
+                return;
+            }
+
+            for (const file of files) {
+                try {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const parsed = v11ParseSingleWorkbook(arrayBuffer, file.name);
+                    if (parsed && parsed.blocks.length > 0) {
+                        v11UploadedFiles.push({
+                            id: String(Date.now() + Math.random()),
+                            fileName: file.name,
+                            bankTitle: parsed.bankTitle,
+                            suspectName: parsed.suspectName,
+                            blocks: parsed.blocks
+                        });
+                        logMessage(`[一覽表整合] 成功匯入「${file.name}」（識別為 ${parsed.blocks.length} 筆被害人區塊）`);
+                    } else {
+                        v11ShowError(`檔案「${file.name}」未解析出任何被害人資料列，請檢查表格內容。`);
+                    }
+                } catch (err) {
+                    v11ShowError(`讀取「${file.name}」時發生錯誤：${err.message}`);
+                }
+            }
+
+            v11FileInput.value = "";
+            v11RenderFileList();
+            window.v11RebuildAndRender();
+        }
+
+        window.v11ClearFiles = function() {
+            v11ClearError();
+            v11UploadedFiles = [];
+            v11MergedOutputRows = [];
+            v11RenderFileList();
+            window.v11RebuildAndRender();
+            logMessage("[一覽表整合] 已清空所有匯入檔案。");
+        };
+
+        window.v11MoveFile = function(index, delta) {
+            const target = index + delta;
+            if (target < 0 || target >= v11UploadedFiles.length) return;
+            const temp = v11UploadedFiles[index];
+            v11UploadedFiles[index] = v11UploadedFiles[target];
+            v11UploadedFiles[target] = temp;
+            v11RenderFileList();
+            window.v11RebuildAndRender();
+        };
+
+        window.v11RemoveFile = function(index) {
+            const removed = v11UploadedFiles.splice(index, 1)[0];
+            v11RenderFileList();
+            window.v11RebuildAndRender();
+            if (removed) logMessage(`[一覽表整合] 已移除檔案：${removed.fileName}`);
+        };
+
+        function v11RenderFileList() {
+            const listEl = document.getElementById("v11FileList");
+            document.getElementById("v11ClearBtn").disabled = v11UploadedFiles.length === 0;
+            listEl.innerHTML = "";
+
+            v11UploadedFiles.forEach((item, idx) => {
+                const li = document.createElement("li");
+                li.className = "flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-700 rounded-xl cursor-grab transition-all hover:border-indigo-400";
+                li.draggable = true;
+
+                li.addEventListener("dragstart", () => { v11DragSrcIndex = idx; });
+                li.addEventListener("dragover", (e) => e.preventDefault());
+                li.addEventListener("drop", (e) => {
+                    e.preventDefault();
+                    if (v11DragSrcIndex !== null && v11DragSrcIndex !== idx) {
+                        const moved = v11UploadedFiles.splice(v11DragSrcIndex, 1)[0];
+                        v11UploadedFiles.splice(idx, 0, moved);
+                        v11RenderFileList();
+                        window.v11RebuildAndRender();
+                    }
+                    v11DragSrcIndex = null;
+                });
+
+                li.innerHTML = `
+                    <div class="flex items-center gap-3 text-sm flex-wrap">
+                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-indigo-600 text-white font-bold text-xs">${idx + 1}</span>
+                        <strong class="text-slate-800 dark:text-slate-200">${v11EscapeHtml(item.fileName)}</strong>
+                        <span class="text-xs px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-semibold">${v11EscapeHtml(item.bankTitle || "未識別帳戶")}（${item.blocks.length} 筆被害人區塊）</span>
+                    </div>
+                    <div class="flex gap-1.5">
+                        <button class="px-2.5 py-1 text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40" type="button" onclick="v11MoveFile(${idx}, -1)" ${idx === 0 ? "disabled" : ""}>▲</button>
+                        <button class="px-2.5 py-1 text-xs border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40" type="button" onclick="v11MoveFile(${idx}, 1)" ${idx === v11UploadedFiles.length - 1 ? "disabled" : ""}>▼</button>
+                        <button class="px-2.5 py-1 text-xs border border-rose-200 dark:border-rose-800 bg-white dark:bg-slate-800 text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30" type="button" onclick="v11RemoveFile(${idx})">✕</button>
+                    </div>
+                `;
+                listEl.appendChild(li);
+            });
+        }
+
+        function v11ParseSingleWorkbook(arrayBuffer, fileName) {
+            const wb = XLSX.read(arrayBuffer, { type: "array" });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+
+            const bankTitle = rows[1] && rows[1][0] ? String(rows[1][0]).trim() : fileName.replace(/\.xlsx?$/i, "");
+
+            let headerIdx = -1;
+            for (let i = 0; i < rows.length; i++) {
+                const cells = (rows[i] || []).map(c => String(c).replace(/\s+/g, ""));
+                const hasSeq = cells.some(c => c === "編號" || c.includes("編號"));
+                const hasVictim = cells.some(c => c.includes("被害人"));
+                if (hasSeq && hasVictim) {
+                    headerIdx = i;
+                    break;
+                }
+            }
+            if (headerIdx === -1) {
+                throw new Error("找不到包含「編號」與「被害人」的欄位標題列");
+            }
+
+            const headers = (rows[headerIdx] || []).map(h => String(h).replace(/\s+/g, ""));
+            const findCol = (predicates) => {
+                for (const pred of predicates) {
+                    const idx = headers.findIndex(pred);
+                    if (idx >= 0) return idx;
+                }
+                return -1;
+            };
+
+            const col = {
+                seq: findCol([h => h === "編號", h => h.includes("編號")]),
+                victim: findCol([h => h.includes("被害人年籍"), h => h.includes("被害人") && !h.includes("匯款")]),
+                fraudType: findCol([h => h.includes("詐騙方式")]),
+                remitTime: findCol([
+                    h => h.includes("匯款日期") || h.includes("匯款時間"),
+                    h => h.includes("被害人匯款") && !h.includes("帳戶") && !h.includes("金額")
+                ]),
+                targetAcct: findCol([h => h.includes("匯入之人頭帳戶"), h => h.includes("匯入帳戶"), h => h.includes("人頭帳戶")]),
+                remitAmt: findCol([h => h.includes("匯款金額")]),
+                withdrawTime: findCol([h => h.includes("提領日期") || h.includes("提領時間")]),
+                withdrawLoc: findCol([h => h.includes("提領地點")]),
+                withdrawAmt: findCol([h => h.includes("提領金額")]),
+                suspect: findCol([h => h.includes("提領犯嫌"), h => h.includes("提領人"), h => h.includes("犯嫌")]),
+            };
+
+            const blocks = [];
+            let current = null;
+            let detectedSuspect = "";
+
+            for (let r = headerIdx + 1; r < rows.length; r++) {
+                const row = rows[r] || [];
+                const firstCell = String(row[0] ?? "").trim();
+                if (firstCell.includes("總匯款金額") || row.join("").includes("總提領金額")) {
+                    break;
+                }
+
+                const seqVal = col.seq >= 0 ? String(row[col.seq] ?? "").trim() : "";
+                const victimRaw = col.victim >= 0 ? String(row[col.victim] ?? "").trim() : "";
+                const fraudTypeRaw = col.fraudType >= 0 ? String(row[col.fraudType] ?? "").trim() : "";
+                const remitTimeRaw = col.remitTime >= 0 ? String(row[col.remitTime] ?? "").trim() : "";
+                const targetAcctRaw = col.targetAcct >= 0 ? String(row[col.targetAcct] ?? "").trim() : "";
+                const remitAmtRaw = col.remitAmt >= 0 ? String(row[col.remitAmt] ?? "").trim() : "";
+
+                const withdrawTimeRaw = col.withdrawTime >= 0 ? String(row[col.withdrawTime] ?? "").trim() : "";
+                const withdrawLocRaw = col.withdrawLoc >= 0 ? String(row[col.withdrawLoc] ?? "").trim() : "";
+                const withdrawAmtRaw = col.withdrawAmt >= 0 ? String(row[col.withdrawAmt] ?? "").trim() : "";
+                const suspectRaw = col.suspect >= 0 ? String(row[col.suspect] ?? "").trim() : "";
+                if (!detectedSuspect && suspectRaw) {
+                    detectedSuspect = suspectRaw.split(/\r?\n/)[0].trim();
+                }
+
+                const isNewBlock = seqVal !== "" && !isNaN(Number(seqVal)) && victimRaw !== "";
+
+                if (isNewBlock) {
+                    if (current) blocks.push(current);
+                    const victimName = victimRaw.split(/\r?\n/)[0].trim();
+                    current = {
+                        sourceFileId: fileName + "_" + bankTitle,
+                        victimName,
+                        fraudType: v11BuildFraudDescription(fraudTypeRaw),
+                        targetAcctRaw: targetAcctRaw || bankTitle,
+                        remits: [],
+                        withdraws: []
+                    };
+                }
+
+                if (!current) continue;
+
+                if (remitTimeRaw || remitAmtRaw) {
+                    current.remits.push({ time: remitTimeRaw, amt: remitAmtRaw });
+                    if (!current.targetAcctRaw && targetAcctRaw) current.targetAcctRaw = targetAcctRaw;
+                    if (fraudTypeRaw) current.fraudType = v11BuildFraudDescription(fraudTypeRaw);
+                }
+
+                if (withdrawTimeRaw || withdrawAmtRaw || withdrawLocRaw) {
+                    current.withdraws.push({ time: withdrawTimeRaw, amt: withdrawAmtRaw, loc: withdrawLocRaw });
+                }
+            }
+
+            if (current) blocks.push(current);
+            return { bankTitle, suspectName: detectedSuspect, blocks };
+        }
+
+        function v11FormatMoney(raw, useWan, isWithdraw = false) {
+            if (raw === null || raw === undefined || String(raw).trim() === "") return "";
+            let num = Number(String(raw).replace(/[,，元\s]/g, ""));
+            if (isNaN(num)) return String(raw).trim();
+            if (isWithdraw) {
+                num = Math.max(0, num - 5);
+            }
+            if (!useWan) return String(num);
+            if (num >= 10000) {
+                const wan = Math.floor(num / 10000);
+                const rem = num % 10000;
+                return rem === 0 ? `${wan}萬` : `${wan}萬${rem}`;
+            }
+            return String(num);
+        }
+
+        function v11FormatDateTime(raw, useTemplateStyle, isMulti) {
+            if (!raw) return "";
+            const cleaned = String(raw).replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim();
+            if (!useTemplateStyle) return cleaned;
+            const m = cleaned.match(/(\d+年\d+月\d+日)\s*(\d+時\d+分)(?:\d+秒)?/);
+            if (m) {
+                return isMulti ? `${m[1]}\n  ${m[2]}許` : `${m[1]}\n${m[2]}許`;
+            }
+            return cleaned;
+        }
+
+        function v11FormatAccount(raw) {
+            if (!raw) return "";
+            const lines = String(raw).split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+            if (lines.length >= 2) {
+                const bank = lines[0];
+                const acct = lines[1].includes("-") ? lines[1].split("-").slice(1).join("-") : lines[1];
+                return `${bank}${acct}號帳戶`;
+            }
+            const m = lines[0].match(/^(.+?)\s*\(帳號[:：]\s*(?:\d+-)?([0-9-]+)\)/);
+            if (m) return `${m[1].trim()}${m[2].trim()}號帳戶`;
+            return lines[0];
+        }
+
+        function v11FormatLocation(raw, useTemplateStyle) {
+            if (!raw) return "";
+            const cleanStore = (s) => String(s).replace(/全家[-－]/g, "全家").trim();
+            const lines = String(raw).split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+            if (!useTemplateStyle) return cleanStore(lines.join(" "));
+            if (lines.length >= 2) {
+                const store = cleanStore(lines[0]);
+                const addr = lines[1].replace(/^[（(]|[)）]$/g, "").trim();
+                return `${addr}${store}`;
+            }
+            return cleanStore(lines[0]);
+        }
+
+        function v11JoinItems(arr) {
+            const valid = arr.filter(v => v !== null && v !== undefined && String(v).trim() !== "");
+            if (valid.length === 0) return "";
+            if (valid.length === 1) return String(valid[0]).trim();
+            return valid.map((val, idx) => `${V11_CIRCLED_NUMS[idx] || `(${idx + 1})`}${val}`).join("\n");
+        }
+
+        function v11NormalizeVictimKey(name) {
+            return String(name || "").replace(/\s+/g, "").replace(/黄/g, "黃").trim();
+        }
+
+        function v11GroupBlocksByVictim(allBlocks) {
+            const victimGroups = [];
+            const victimIndex = new Map();
+
+            for (const blk of allBlocks) {
+                const vKey = v11NormalizeVictimKey(blk.victimName);
+                if (!vKey) continue;
+
+                const fraudDesc = blk.fraudType || v11BuildFraudDescription("");
+                const normFraudKey = fraudDesc.replace(/\s+/g, "").trim();
+
+                if (!victimIndex.has(vKey)) {
+                    victimIndex.set(vKey, victimGroups.length);
+                    victimGroups.push({
+                        victimName: blk.victimName,
+                        cases: [{
+                            sourceFileId: blk.sourceFileId,
+                            fraudType: fraudDesc,
+                            normFraudKey,
+                            targetAcctRaw: blk.targetAcctRaw,
+                            remits: [...blk.remits],
+                            withdraws: [...blk.withdraws]
+                        }]
+                    });
+                } else {
+                    const vg = victimGroups[victimIndex.get(vKey)];
+                    const existingCase = vg.cases.find(c => c.normFraudKey === normFraudKey);
+                    if (existingCase) {
+                        if (!existingCase.targetAcctRaw && blk.targetAcctRaw) existingCase.targetAcctRaw = blk.targetAcctRaw;
+                        existingCase.remits.push(...blk.remits);
+                        existingCase.withdraws.push(...blk.withdraws);
+                    } else {
+                        vg.cases.push({
+                            sourceFileId: blk.sourceFileId,
+                            fraudType: fraudDesc,
+                            normFraudKey,
+                            targetAcctRaw: blk.targetAcctRaw,
+                            remits: [...blk.remits],
+                            withdraws: [...blk.withdraws]
+                        });
+                    }
+                }
+            }
+            return victimGroups;
+        }
+
+        window.v11RebuildAndRender = function() {
+            const addSue = document.getElementById("v11OptAddSue").checked;
+            const useWan = document.getElementById("v11OptWan").checked;
+            const fmtLoc = document.getElementById("v11OptFormatLoc").checked;
+            const fmtTime = document.getElementById("v11OptFormatTime").checked;
+            const mergeSpan = document.getElementById("v11OptMergeSpan").checked;
+
+            const rows = [];
+            let serialNo = 1;
+
+            const allImportedBlocks = [];
+            for (const fileObj of v11UploadedFiles) {
+                for (const blk of fileObj.blocks) {
+                    allImportedBlocks.push(blk);
+                }
+            }
+
+            const victimGroups = v11GroupBlocksByVictim(allImportedBlocks);
+
+            for (const vGroup of victimGroups) {
+                const groupStartRowIdx = rows.length;
+                const currentNo = serialNo++;
+                const victimDisplay = addSue ? `${vGroup.victimName}\n(提告)` : vGroup.victimName;
+
+                vGroup.cases.forEach((block, caseIdx) => {
+                    const acctDisplay = v11FormatAccount(block.targetAcctRaw);
+                    const isMultiRemit = block.remits.length > 1;
+                    const remitTimeStr = v11JoinItems(block.remits.map(r => v11FormatDateTime(r.time, fmtTime, isMultiRemit)));
+                    const remitAmtStr = v11JoinItems(block.remits.map(r => v11FormatMoney(r.amt, useWan, false)));
+
+                    const locGroups = [];
+                    let lastLocKey = null;
+
+                    for (const w of block.withdraws) {
+                        const locFormatted = v11FormatLocation(w.loc, fmtLoc);
+                        if (locGroups.length > 0 && lastLocKey === locFormatted) {
+                            locGroups[locGroups.length - 1].items.push(w);
+                        } else {
+                            locGroups.push({ location: locFormatted, items: [w] });
+                            lastLocKey = locFormatted;
+                        }
+                    }
+
+                    const normAcctKey = (block.sourceFileId || "") + "|" + acctDisplay.replace(/\s+/g, "");
+                    if (locGroups.length === 0) {
+                        rows.push({
+                            normAcctKey,
+                            no: caseIdx === 0 ? currentNo : "",
+                            victim: caseIdx === 0 ? victimDisplay : "",
+                            fraudType: block.fraudType || v11BuildFraudDescription(""),
+                            remitTime: remitTimeStr,
+                            remitAmt: remitAmtStr,
+                            targetAcct: acctDisplay,
+                            withdrawTime: "",
+                            withdrawAmt: "",
+                            withdrawLoc: "",
+                            caseNo: "",
+                            hasWithdraw: false,
+                            leftSpan: 1,
+                            isLeftSpanChild: false,
+                            withdrawSpan: 1,
+                            isWithdrawSpanChild: false,
+                            victimSpan: 1,
+                            isVictimSpanChild: false
+                        });
+                    } else {
+                        const caseRowSpan = mergeSpan ? locGroups.length : 1;
+                        locGroups.forEach((grp, gIdx) => {
+                            const isMultiW = grp.items.length > 1;
+                            const wTimeStr = v11JoinItems(grp.items.map(it => v11FormatDateTime(it.time, fmtTime, isMultiW)));
+                            const wAmtStr = v11JoinItems(grp.items.map(it => v11FormatMoney(it.amt, useWan, true)));
+
+                            if (gIdx === 0) {
+                                rows.push({
+                                    normAcctKey,
+                                    no: (caseIdx === 0) ? currentNo : "",
+                                    victim: (caseIdx === 0) ? victimDisplay : "",
+                                    fraudType: block.fraudType || v11BuildFraudDescription(""),
+                                    remitTime: remitTimeStr,
+                                    remitAmt: remitAmtStr,
+                                    targetAcct: acctDisplay,
+                                    withdrawTime: wTimeStr,
+                                    withdrawAmt: wAmtStr,
+                                    withdrawLoc: grp.location,
+                                    caseNo: "",
+                                    hasWithdraw: true,
+                                    leftSpan: caseRowSpan,
+                                    isLeftSpanChild: false,
+                                    withdrawSpan: 1,
+                                    isWithdrawSpanChild: false,
+                                    victimSpan: 1,
+                                    isVictimSpanChild: false
+                                });
+                            } else {
+                                rows.push({
+                                    normAcctKey,
+                                    no: "",
+                                    victim: "",
+                                    fraudType: "",
+                                    remitTime: "",
+                                    remitAmt: "",
+                                    targetAcct: "",
+                                    withdrawTime: wTimeStr,
+                                    withdrawAmt: wAmtStr,
+                                    withdrawLoc: grp.location,
+                                    caseNo: "",
+                                    hasWithdraw: true,
+                                    leftSpan: 1,
+                                    isLeftSpanChild: mergeSpan,
+                                    withdrawSpan: 1,
+                                    isWithdrawSpanChild: false,
+                                    victimSpan: 1,
+                                    isVictimSpanChild: false
+                                });
+                            }
+                        });
+                    }
+                });
+
+                const groupEndRowIdx = rows.length - 1;
+                const totalVictimRows = groupEndRowIdx - groupStartRowIdx + 1;
+                if (mergeSpan && totalVictimRows > 1) {
+                    rows[groupStartRowIdx].no = currentNo;
+                    rows[groupStartRowIdx].victim = victimDisplay;
+                    rows[groupStartRowIdx].victimSpan = totalVictimRows;
+                    rows[groupStartRowIdx].isVictimSpanChild = false;
+                    for (let rIdx = groupStartRowIdx + 1; rIdx <= groupEndRowIdx; rIdx++) {
+                        rows[rIdx].isVictimSpanChild = true;
+                        rows[rIdx].victimSpan = 1;
+                    }
+                }
+            }
+
+            if (mergeSpan && rows.length > 0) {
+                let segStart = 0;
+                while (segStart < rows.length) {
+                    let segEnd = segStart;
+                    const key = rows[segStart].normAcctKey;
+                    while (segEnd + 1 < rows.length && rows[segEnd + 1].normAcctKey === key) {
+                        segEnd++;
+                    }
+
+                    const segSlice = rows.slice(segStart, segEnd + 1);
+                    if (segSlice.some(r => r.hasWithdraw)) {
+                        let i = segStart;
+                        while (i <= segEnd) {
+                            if (!rows[i].hasWithdraw) {
+                                let runStart = i;
+                                while (i <= segEnd && !rows[i].hasWithdraw) {
+                                    i++;
+                                }
+                                let runEnd = i - 1;
+                                if (runEnd + 1 <= segEnd && rows[runEnd + 1].hasWithdraw) {
+                                    const targetIdx = runEnd + 1;
+                                    const spanTotal = targetIdx - runStart + 1;
+                                    rows[runStart].withdrawSpan = spanTotal;
+                                    rows[runStart].isWithdrawSpanChild = false;
+                                    rows[runStart].withdrawTime = rows[targetIdx].withdrawTime;
+                                    rows[runStart].withdrawAmt = rows[targetIdx].withdrawAmt;
+                                    rows[runStart].withdrawLoc = rows[targetIdx].withdrawLoc;
+
+                                    for (let k = runStart + 1; k <= targetIdx; k++) {
+                                        rows[k].isWithdrawSpanChild = true;
+                                        rows[k].withdrawSpan = 1;
+                                    }
+                                } else if (runStart - 1 >= segStart && rows[runStart - 1].hasWithdraw) {
+                                    let anchor = runStart - 1;
+                                    while (anchor > segStart && rows[anchor].isWithdrawSpanChild) {
+                                        anchor--;
+                                    }
+                                    const spanTotal = runEnd - anchor + 1;
+                                    rows[anchor].withdrawSpan = spanTotal;
+                                    for (let k = anchor + 1; k <= runEnd; k++) {
+                                        rows[k].isWithdrawSpanChild = true;
+                                        rows[k].withdrawSpan = 1;
+                                    }
+                                }
+                            } else {
+                                i++;
+                            }
+                        }
+                    }
+
+                    segStart = segEnd + 1;
+                }
+            }
+
+            v11MergedOutputRows = rows;
+            v11RenderPreviewTable();
+        };
+
+        function v11RenderPreviewTable() {
+            const tbody = document.getElementById("v11PreviewBody");
+            const statsText = document.getElementById("v11StatsText");
+            const exportBtn = document.getElementById("v11ExportBtn");
+            const mergeSpan = document.getElementById("v11OptMergeSpan").checked;
+
+            if (v11MergedOutputRows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" class="text-center py-12 text-slate-400">請先上方選取「提領一覽表」檔案以預覽整合結果</td></tr>`;
+                statsText.textContent = "尚未匯入任何檔案";
+                exportBtn.disabled = true;
+                return;
+            }
+
+            const victimCount = v11MergedOutputRows.filter(r => r.no !== "").length;
+            statsText.textContent = `已匯入 ${v11UploadedFiles.length} 份一覽表 ｜ 共 ${victimCount} 位被害人（整合後 ${v11MergedOutputRows.length} 列）`;
+            exportBtn.disabled = false;
+
+            const tdCenterClass = "border border-slate-300 dark:border-slate-700 p-1.5 whitespace-pre-wrap leading-snug text-center align-middle";
+            const tdLeftClass = "border border-slate-300 dark:border-slate-700 p-1.5 whitespace-pre-wrap leading-snug text-left align-top";
+
+            tbody.innerHTML = v11MergedOutputRows.map(r => {
+                const leftRs = mergeSpan && r.leftSpan > 1 ? ` rowspan="${r.leftSpan}"` : "";
+                const wRs = mergeSpan && r.withdrawSpan > 1 ? ` rowspan="${r.withdrawSpan}"` : "";
+
+                const vSpan = mergeSpan && r.victimSpan > 1 ? r.victimSpan : (mergeSpan && r.leftSpan > 1 ? r.leftSpan : 1);
+                const vRs = vSpan > 1 ? ` rowspan="${vSpan}"` : "";
+                const showVictimCell = !mergeSpan || !r.isVictimSpanChild;
+
+                const noCell = showVictimCell ? `<td class="${tdCenterClass}"${vRs}>${v11EscapeHtml(String(r.no))}</td>` : "";
+                const victimCell = showVictimCell ? `<td class="${tdCenterClass}"${vRs}>${v11EscapeHtml(r.victim)}</td>` : "";
+
+                const leftCells = (mergeSpan && r.isLeftSpanChild) ? `
+                    ${noCell}
+                    ${victimCell}
+                ` : `
+                    ${noCell}
+                    ${victimCell}
+                    <td class="${tdLeftClass}"${leftRs}>${v11EscapeHtml(r.fraudType)}</td>
+                    <td class="${tdLeftClass}"${leftRs}>${v11EscapeHtml(r.remitTime)}</td>
+                    <td class="${tdLeftClass}"${leftRs}>${v11EscapeHtml(r.remitAmt)}</td>
+                    <td class="${tdLeftClass}"${leftRs}>${v11EscapeHtml(r.targetAcct)}</td>
+                `;
+
+                const withdrawCells = (mergeSpan && r.isWithdrawSpanChild) ? "" : `
+                    <td class="${tdLeftClass}"${wRs}>${v11EscapeHtml(r.withdrawTime)}</td>
+                    <td class="${tdLeftClass}"${wRs}>${v11EscapeHtml(r.withdrawAmt)}</td>
+                    <td class="${tdLeftClass}"${wRs}>${v11EscapeHtml(r.withdrawLoc)}</td>
+                `;
+
+                const caseCell = (mergeSpan && r.isLeftSpanChild) ? "" : `
+                    <td class="${tdLeftClass}"${leftRs}>${v11EscapeHtml(r.caseNo)}</td>
+                `;
+
+                return `<tr>${leftCells}${withdrawCells}${caseCell}</tr>`;
+            }).join("");
+        }
+
+        function v11EstimateCellLines(text, colWidth) {
+            if (text === null || text === undefined || String(text) === "") return 1;
+            const cap = Math.max(2.0, colWidth * 0.78);
+            let totalLines = 0;
+            const paragraphs = String(text).split("\n");
+            for (const para of paragraphs) {
+                if (para.length === 0) {
+                    totalLines += 1;
+                } else {
+                    let units = 0;
+                    for (let i = 0; i < para.length; i++) {
+                        units += para.charCodeAt(i) < 128 ? 1.05 : 2.05;
+                    }
+                    totalLines += Math.max(1, Math.ceil((units - 0.01) / cap));
+                }
+            }
+            return Math.max(1, totalLines + 1);
+        }
+
+        function v11CalcBalancedRowHeight(linesCount) {
+            return Math.max(18.5, Number((linesCount * 15.2 + 2.0).toFixed(1)));
+        }
+
+        window.v11ExportExcel = async function() {
+            v11ClearError();
+            if (v11MergedOutputRows.length === 0) return;
+
+            const mergeSpan = document.getElementById("v11OptMergeSpan").checked;
+            const detectedSuspect = (v11UploadedFiles.find(f => f.suspectName)?.suspectName || "").replace(/[\\/:*?"<>|]/g, "_").trim();
+            const exportFileName = detectedSuspect ? `附表_${detectedSuspect}.xlsx` : `整合一覽表_${new Date().toISOString().slice(0, 10).replace(/-/g, "")}.xlsx`;
+            const headers = [
+                "編號", "被害人", "詐騙方式", "匯款時間", "匯款金額(新臺幣)元",
+                "匯入帳戶", "提領時間", "提領金額(新臺幣)元", "提領地點", "案號"
+            ];
+
+            if (typeof ExcelJS !== "undefined") {
+                try {
+                    const workbook = new ExcelJS.Workbook();
+                    const sheet = workbook.addWorksheet("Sheet1", {
+                        pageSetup: {
+                            paperSize: 9,
+                            orientation: "portrait",
+                            fitToPage: true,
+                            fitToWidth: 1,
+                            fitToHeight: 0,
+                            horizontalCentered: true,
+                            printTitlesRow: "1:1",
+                            margins: {
+                                left: 0.35, right: 0.35, top: 0.45, bottom: 0.45, header: 0.25, footer: 0.25
+                            }
+                        },
+                        headerFooter: {
+                            oddFooter: "&C第 &P / &N 頁"
+                        }
+                    });
+
+                    sheet.columns = [
+                        { key: "no", width: V11_COLUMN_WIDTHS[0] },
+                        { key: "victim", width: V11_COLUMN_WIDTHS[1] },
+                        { key: "fraudType", width: V11_COLUMN_WIDTHS[2] },
+                        { key: "remitTime", width: V11_COLUMN_WIDTHS[3] },
+                        { key: "remitAmt", width: V11_COLUMN_WIDTHS[4] },
+                        { key: "targetAcct", width: V11_COLUMN_WIDTHS[5] },
+                        { key: "withdrawTime", width: V11_COLUMN_WIDTHS[6] },
+                        { key: "withdrawAmt", width: V11_COLUMN_WIDTHS[7] },
+                        { key: "withdrawLoc", width: V11_COLUMN_WIDTHS[8] },
+                        { key: "caseNo", width: V11_COLUMN_WIDTHS[9] }
+                    ];
+
+                    const headerRow = sheet.addRow(headers);
+                    headerRow.height = 50;
+                    headerRow.eachCell((cell) => {
+                        cell.font = { name: "標楷體", size: 12, bold: true };
+                        cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+                        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2E8F0" } };
+                        cell.border = { top: { style: "thin" }, left: { style: "thin" }, bottom: { style: "thin" }, right: { style: "thin" } };
+                    });
+
+                    const mergesToApply = [];
+                    const rowHeights = [];
+
+                    v11MergedOutputRows.forEach((r, idx) => {
+                        const excelRowIdx = idx + 2;
+                        const cellValues = [
+                            r.no === "" ? null : Number(r.no),
+                            r.victim || null,
+                            r.fraudType || null,
+                            r.remitTime || null,
+                            r.remitAmt || null,
+                            r.targetAcct || null,
+                            r.withdrawTime || null,
+                            r.withdrawAmt || null,
+                            r.withdrawLoc || null,
+                            r.caseNo || null
+                        ];
+
+                        const row = sheet.addRow(cellValues);
+
+                        const lineCounts = [
+                            !mergeSpan || !r.isLeftSpanChild ? v11EstimateCellLines(r.no, V11_COLUMN_WIDTHS[0]) : 1,
+                            !mergeSpan || !r.isLeftSpanChild ? v11EstimateCellLines(r.victim, V11_COLUMN_WIDTHS[1]) : 1,
+                            !mergeSpan || !r.isLeftSpanChild ? v11EstimateCellLines(r.fraudType, V11_COLUMN_WIDTHS[2]) : 1,
+                            !mergeSpan || !r.isLeftSpanChild ? v11EstimateCellLines(r.remitTime, V11_COLUMN_WIDTHS[3]) : 1,
+                            !mergeSpan || !r.isLeftSpanChild ? v11EstimateCellLines(r.remitAmt, V11_COLUMN_WIDTHS[4]) : 1,
+                            !mergeSpan || !r.isLeftSpanChild ? v11EstimateCellLines(r.targetAcct, V11_COLUMN_WIDTHS[5]) : 1,
+                            !mergeSpan || !r.isWithdrawSpanChild ? v11EstimateCellLines(r.withdrawTime, V11_COLUMN_WIDTHS[6]) : 1,
+                            !mergeSpan || !r.isWithdrawSpanChild ? v11EstimateCellLines(r.withdrawAmt, V11_COLUMN_WIDTHS[7]) : 1,
+                            !mergeSpan || !r.isWithdrawSpanChild ? v11EstimateCellLines(r.withdrawLoc, V11_COLUMN_WIDTHS[8]) : 1,
+                            !mergeSpan || !r.isLeftSpanChild ? v11EstimateCellLines(r.caseNo, V11_COLUMN_WIDTHS[9]) : 1
+                        ];
+
+                        const maxLines = Math.max(1, ...lineCounts);
+                        const balancedH = v11CalcBalancedRowHeight(maxLines);
+                        row.height = balancedH;
+                        rowHeights.push(balancedH);
+
+                        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+                            cell.font = { name: "標楷體", size: 12 };
+                            const isCenterMiddle = colNumber === 1 || colNumber === 2;
+
+                            cell.alignment = {
+                                vertical: isCenterMiddle ? "middle" : "top",
+                                horizontal: isCenterMiddle ? "center" : "left",
+                                wrapText: true
+                            };
+                            cell.border = { top: { style: "thin" }, left: { style: "thin" }, bottom: { style: "thin" }, right: { style: "thin" } };
+                        });
+
+                        const vSpanExport = mergeSpan && r.victimSpan > 1 ? r.victimSpan : 0;
+                        if (vSpanExport > 1) {
+                            const startR = excelRowIdx;
+                            const endR = excelRowIdx + vSpanExport - 1;
+                            [1, 2].forEach(c => {
+                                mergesToApply.push({ r1: startR, c1: c, r2: endR, c2: c });
+                            });
+                        }
+
+                        if (mergeSpan && r.leftSpan > 1) {
+                            const startR = excelRowIdx;
+                            const endR = excelRowIdx + r.leftSpan - 1;
+                            const colsForCase = (vSpanExport > 1) ? [3, 4, 5, 6, 10] : [1, 2, 3, 4, 5, 6, 10];
+                            colsForCase.forEach(c => {
+                                mergesToApply.push({ r1: startR, c1: c, r2: endR, c2: c });
+                            });
+                        }
+
+                        if (mergeSpan && r.withdrawSpan > 1) {
+                            const startR = excelRowIdx;
+                            const endR = excelRowIdx + r.withdrawSpan - 1;
+                            [7, 8, 9].forEach(c => {
+                                mergesToApply.push({ r1: startR, c1: c, r2: endR, c2: c });
+                            });
+                        }
+                    });
+
+                    const mergedSet = new Set();
+                    const uniqueMerges = [];
+                    for (const m of mergesToApply) {
+                        if (m.r1 >= m.r2 && m.c1 >= m.c2) continue;
+                        let conflict = false;
+                        for (let rr = m.r1; rr <= m.r2; rr++) {
+                            for (let cc = m.c1; cc <= m.c2; cc++) {
+                                const key = `${rr}:${cc}`;
+                                if (mergedSet.has(key)) {
+                                    conflict = true;
+                                    break;
+                                }
+                            }
+                            if (conflict) break;
+                        }
+                        if (!conflict) {
+                            for (let rr = m.r1; rr <= m.r2; rr++) {
+                                for (let cc = m.c1; cc <= m.c2; cc++) {
+                                    mergedSet.add(`${rr}:${cc}`);
+                                }
+                            }
+                            uniqueMerges.push(m);
+                        }
+                    }
+
+                    uniqueMerges.forEach(({ r1, c1, r2, c2 }) => {
+                        try {
+                            sheet.mergeCells(r1, c1, r2, c2);
+                        } catch (mergeErr) {
+                            console.warn("Skip merge:", r1, c1, r2, c2, mergeErr);
+                            return;
+                        }
+                        const topCell = sheet.getCell(r1, c1);
+                        const isCenterMiddle = c1 === 1 || c1 === 2;
+                        topCell.alignment = {
+                            vertical: isCenterMiddle ? "middle" : "top",
+                            horizontal: isCenterMiddle ? "center" : "left",
+                            wrapText: true
+                        };
+
+                        const mergedLines = v11EstimateCellLines(topCell.value, V11_COLUMN_WIDTHS[c1 - 1]);
+                        const neededHeight = v11CalcBalancedRowHeight(mergedLines);
+                        let currentGroupHeight = 0;
+                        for (let rIdx = r1 - 2; rIdx <= r2 - 2; rIdx++) {
+                            currentGroupHeight += rowHeights[rIdx] || 18.5;
+                        }
+                        if (currentGroupHeight < neededHeight) {
+                            const diff = Number((neededHeight - currentGroupHeight).toFixed(1));
+                            const lastRow = sheet.getRow(r2);
+                            lastRow.height = Number(((lastRow.height || 18.5) + diff).toFixed(1));
+                            rowHeights[r2 - 2] = lastRow.height;
+                        }
+                    });
+
+                    const buffer = await workbook.xlsx.writeBuffer();
+                    v11DownloadBlob(new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), exportFileName);
+                    logMessage(`🎉 [一覽表整合] 成功匯出整合檔：${exportFileName}`);
+                    return;
+                } catch (e) {
+                    v11ShowError("ExcelJS 匯出發生錯誤，改以基本格式匯出：" + e.message);
+                }
+            }
+
+            const aoa = [
+                headers,
+                ...v11MergedOutputRows.map(r => [r.no, r.victim, r.fraudType, r.remitTime, r.remitAmt, r.targetAcct, r.withdrawTime, r.withdrawAmt, r.withdrawLoc, r.caseNo])
+            ];
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            ws["!cols"] = V11_COLUMN_WIDTHS.map(w => ({ wch: w }));
+            XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+            XLSX.writeFile(wb, exportFileName);
+            logMessage(`🎉 [一覽表整合] 成功匯出整合檔：${exportFileName}`);
+        };
+
+        function v11DownloadBlob(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function v11EscapeHtml(str) {
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;");
+        }
+
+        //------------------- 3. CSV 批次轉檔工具升級版 ----------------------
         let csvFolderFiles = []; 
         let errorLogs = []; 
 
@@ -690,6 +1654,7 @@
                 document.getElementById('btnRunCsv').disabled = false;
             }
         };
+
         async function writeFileToDisk(rootHandle, pathParts, fileName, content) {
             let currentHandle = rootHandle;
             for (const part of pathParts) {
@@ -700,6 +1665,7 @@
             const writable = await fileHandle.createWritable();
             await writable.write(content); await writable.close();
         }
+
         async function generateExcelBuffer(rows) {
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.aoa_to_sheet(rows);
